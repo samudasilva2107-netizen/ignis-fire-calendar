@@ -1,0 +1,31 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Sintaxis de los scripts
+        run: |
+          python -m py_compile scripts/ingest_firms.py scripts/backfill_firms.py scripts/validate_standalone.py
+          echo "OK: los tres scripts compilan"
+
+      - name: Plan del backfill (sin red, sin clave)
+        run: python scripts/backfill_firms.py --dry-run | head -6
+
+      - name: Validar standalone (si está versionado)
+        run: |
+          found=0
+          for f in ignis-demo.html web/public/ignis-demo.html; do
+            if [ -f "$f" ]; then found=1; python scripts/validate_standalone.py "$f"; fi
+          done
+          if [ "$found" = "0" ]; then echo "Sin standalone versionado: se omite."; fi

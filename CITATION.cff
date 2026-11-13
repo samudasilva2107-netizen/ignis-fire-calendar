@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "Si usás este software o su método, citá el repositorio."
+title: "IGNIS — Calendario de Actividad de Incendios Armonizado (MODIS + VIIRS)"
+abstract: >-
+  Armonización de focos de incendio MODIS (1 km) y VIIRS (375 m) sobre una rejilla
+  común de 0,05°, con FRP normalizado por área de píxel, estado de cobertura
+  explícito por celda-día y procedencia por sensor. Desarrollado para el NASA
+  Space Apps Challenge 2026 (desafío de Marina Companuchi, CONAE).
+authors:
+  - family-names: "Da Silva"
+    given-names: "Samuel"
+    affiliation: "Argentina Digital"
+version: 0.1.0
+date-released: 2026-11-13
+license: MIT
+repository-code: "https://github.com/samudasilva2107-netizen/ignis-fire-calendar"
+keywords:
+  - remote sensing
+  - active fire
+  - MODIS
+  - VIIRS
+  - NASA FIRMS
+  - harmonization

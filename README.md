@@ -1,80 +1,150 @@
-# IGNIS — Calendario de Actividad de Incendios
+# IGNIS — Calendario de Actividad de Incendios Armonizado
 
-Armonización de focos de incendio **MODIS** y **VIIRS** en un calendario de actividad.
-NASA Space Apps Challenge 2026 · sede **Bahía Blanca** (virtual) · 14-15 de noviembre.
+**Harmonized Fire Activity Calendar** · NASA Space Apps Challenge 2026 · Bahía Blanca (virtual)
 
-## El problema, medido
+[Español](#español) · [English](#english)
 
-Los registros satelitales de incendios no son comparables entre sí. Lo medimos con datos reales de FIRMS (7 días, Argentina):
+---
+
+## Español
+
+### El problema
+
+Los registros satelitales de focos de incendio están partidos entre dos sensores que **no son comparables directamente**: MODIS (1 km) y VIIRS (375 m) tienen distinta resolución espacial, distinta sensibilidad y distinto horario de observación.
+
+Como MODIS está saliendo de su vida operativa, **sin un método de armonización se pierden casi diez años de historia de incendios**. Es el problema planteado por la autora del desafío (Marina Companuchi, CONAE): *«si no hay un método para comparar sus datos, casi 10 años de información histórica se van a perder»*.
+
+### Lo que medimos
+
+Centro-Norte de Argentina, 8 días (2026-11-05 → 2026-11-12), rejilla de 0,05°:
 
 | Métrica | Valor |
 |---|---|
-| Focos detectados por MODIS | **2.303** |
-| Focos detectados por VIIRS | **7.697** |
-| Ratio VIIRS/MODIS | **3,34×** |
-| Celdas-día detectadas por **ambos** sensores | **13,5 %** |
-| Celdas-día **solo MODIS** | 23,5 % |
-| Celdas-día **solo VIIRS** | 63,1 % |
+| Detecciones totales | **13.872** |
+| MODIS (Terra + Aqua) | 1.952 · FRP 95.309 MW |
+| VIIRS (NOAA-20 + NOAA-21) | 11.920 · FRP 196.831 MW |
+| Ratio VIIRS / MODIS | **6,11×** |
+| FRP total | 292.141 MW |
+| FRP medio por detección | MODIS **48,8 MW** · VIIRS **16,5 MW** |
+| Celdas-día detectadas por ambos | **14,6 %** |
+| Celdas-día solo MODIS | 16,2 % |
+| Celdas-día solo VIIRS | 69,2 % |
 
-En Sudamérica el patrón se repite: 20.733 vs 65.247 focos (3,15×) y solo **14,7 %** de coincidencia.
+**Lectura:** no es que un sensor vea «más» que el otro — **ven cosas distintas**. VIIRS detecta quemas agrícolas e industriales pequeñas; MODIS solo ve los incendios grandes (su FRP medio por detección es 3× mayor). Por eso sumar sus conteos es un error conceptual, no un detalle de calibración.
 
-**Conclusión:** usar un solo sensor implica perder entre el 20 % y el 60 % de lo que ve el otro. No es ruido: es diferencia de resolución espacial (1 km vs 375 m), hora de sobrevuelo y escala de confianza.
+> ⚠️ **La coincidencia depende del AOI y de la ventana**: no es un valor universal del proyecto.
 
-## Arranque rápido
-
-Sin dependencias externas, sin API key. Solo Python 3.8+.
+### Arranque rápido
 
 ```bash
-python3 scripts/ingest_firms.py --region South_America --days 7 --bbox -55.1 -73.6 -21.7 -53.6
+# Requiere Python 3.8+. Sin dependencias externas.
+python3 scripts/ingest_firms.py --region South_America --days 7 \
+  --bbox -35.0 -68.5 -22.0 -56.0
+
+# Backfill histórico multianual (requiere MAP_KEY gratuito de FIRMS)
+export FIRMS_MAP_KEY=xxxxxxxx
+python3 scripts/backfill_firms.py --dry-run    # muestra el plan, no gasta requests
+python3 scripts/backfill_firms.py              # ~773 requests, ~13 min
 ```
 
-Salidas en `salida/`:
+Salidas: `harmonized.csv`, `calendar.json`, `kpi.json`, `monthly.json`.
 
-- `harmonized.csv` — una fila por celda-día-sensor, con variables unificadas
-- `calendar.json` — matriz día × celda, lista para la vista de calendario
-- `resumen.txt` — números comparativos para el pitch
+### Decisiones metodológicas
 
-### Parámetros
+1. **Rejilla común** de 0,05° (~5,6 km): unifica el píxel de 1 km con el de 375 m.
+2. **FRP normalizado por área de píxel** (`MW/km²`), no FRP crudo. MODIS: 1,00 km² · VIIRS: 0,1406 km².
+3. **Sin equivalencia inventada de confianza.** MODIS usa 0–100; VIIRS usa `low/nominal/high`. La NASA no define una equivalencia rigurosa: reportamos cada sensor con su escala y declaramos el supuesto.
+4. **«Sin datos» es un estado propio**, distinto de «sin fuego». Un día sin cobertura satelital no es un día sin incendios.
+5. **Agregación diaria en UTC**, declarada en la interfaz.
+6. **Suomi-NPP excluido**: cesó transmisiones el 2026-11-02 13:00 UTC (alerta oficial NASA Earthdata). VIIRS se construye con NOAA-20 + NOAA-21.
 
-| Flag | Default | Descripción |
-|---|---|---|
-| `--region` | `South_America` | Región FIRMS (`South_America`, `Global`) |
-| `--days` | `7` | Ventana de descarga (1 o 7) |
-| `--step` | `0.05` | Tamaño de celda en grados (~5,6 km) |
-| `--bbox` | — | `MINLAT MINLON MAXLAT MAXLON` para recortar |
-| `--outdir` | `salida` | Carpeta de salida |
+### Límites declarados
 
-## Decisiones de armonización
+- **No mide superficie quemada.** Para eso: MCD64A1 o Sentinel-2.
+- **No infiere causas** ni intencionalidad: detecta energía térmica.
+- **Paso orbital discreto**: cada sensor pasa ~2 veces al día; los incendios que se inician y extinguen entre pasadas no se registran.
+- **Sin máscara de nubes** en este producto: el vacío de datos se aproxima con una regla explícita, no se infiere nubosidad.
 
-1. **Rejilla común** de 0,05° (~5,6 km). Unifica el píxel de 1 km de MODIS con el de 375 m de VIIRS.
-2. **FRP normalizado**: se compara `frp_density_MW_km2` (MW por km² de píxel), no el FRP crudo. MODIS: 1,00 km² · VIIRS: 0,1406 km².
-3. **Confianza unificada**: MODIS 0-100 numérica; VIIRS `low/nominal/high` → 30/60/90.
-4. **"Sin cobertura" ≠ "sin incendio"**: el calendario marca la ausencia de datos como estado propio, no como cero.
-5. **Día local solar**, no UTC, para la agregación diaria.
+Detalle completo en [`docs/METHOD.md`](docs/METHOD.md).
 
-## Estructura
+### Cómo verificar antes de publicar
 
-```
-scripts/ingest_firms.py          ingesta + armonización (funcional)
-data/samples/calendar.json       muestra real (2.867 celdas, 7 días AR)
-data/samples/harmonized_head.csv muestra del esquema de salida
-docs/prompt-pack.md              cuaderno NotebookLM: fuentes oficiales + prompts
-docs/resumen-corrida-argentina.txt  salida completa de la corrida de referencia
-web/                             app Next.js (calendario + mapa + comparador)
+```bash
+python3 scripts/validate_standalone.py ignis-demo.html
 ```
 
-## Fuentes de datos
+Si no devuelve `exit 0`, el HTML no se muestra: detecta datos ausentes, credenciales embebidas, tiles sin clave, emojis, gradientes, `alert()` y números prohibidos.
 
-- [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) — CSV públicos, sin clave
-- [FIRMS API](https://firms.modaps.eosdis.nasa.gov/api/area/) — históricos con `MAP_KEY` gratuito
-- [Ficha VNP14IMG](https://lpdaac.usgs.gov/products/vnp14imgv001/) — VIIRS 375 m
-- [Ficha MOD14A1](https://lpdaac.usgs.gov/products/mod14a1v061/) — MODIS 1 km
-- [GWIS / JRC](https://gwis.jrc.ec.europa.eu/) — sistema global de información de incendios
+---
 
-## Variables de entorno
+## English
 
-Ninguna para la demo. Para históricos, `FIRMS_MAP_KEY` **solo del lado del servidor** (nunca `NEXT_PUBLIC_`). Ver `.env.example`.
+### The problem
 
-## Equipo
+Satellite fire records are split between two sensors that **cannot be compared directly**: MODIS (1 km) and VIIRS (375 m) differ in spatial resolution, sensitivity and overpass time. As MODIS leaves operational life, **without a harmonization method almost ten years of fire history are lost**.
 
-IGNIS · NASA Space Apps Challenge 2026 — Bahía Blanca.
+### What we measured
+
+North-Central Argentina, 8 days (2026-11-05 → 2026-11-12), 0.05° grid:
+
+| Metric | Value |
+|---|---|
+| Total detections | **13,872** |
+| MODIS (Terra + Aqua) | 1,952 · 95,309 MW |
+| VIIRS (NOAA-20 + NOAA-21) | 11,920 · 196,831 MW |
+| VIIRS / MODIS ratio | **6.11×** |
+| Total FRP | 292,141 MW |
+| Mean FRP per detection | MODIS **48.8 MW** · VIIRS **16.5 MW** |
+| Cell-days seen by both sensors | **14.6 %** |
+
+**Reading:** it is not that one sensor «sees more» — **they see different things**. VIIRS catches small agricultural and industrial burns; MODIS only sees large fires (mean FRP per detection is 3× higher). Summing their counts is a conceptual error, not a calibration detail.
+
+### Quick start
+
+```bash
+python3 scripts/ingest_firms.py --region South_America --days 7 \
+  --bbox -35.0 -68.5 -22.0 -56.0
+```
+
+Python 3.8+, no external dependencies. Public FIRMS CSVs need no key for 1- or 7-day windows; the historical backfill requires a free FIRMS `MAP_KEY`.
+
+### Method decisions
+
+1. **Common 0.05° grid** (~5.6 km) reconciling 1 km and 375 m pixels.
+2. **FRP normalized by pixel area** (`MW/km²`) instead of raw FRP.
+3. **No invented confidence equivalence.** MODIS uses 0–100, VIIRS uses `low/nominal/high`; NASA defines no rigorous mapping, so each sensor keeps its own scale and the assumption is stated.
+4. **«No data» is a first-class state**, distinct from «no fire».
+5. **Daily aggregation in UTC**, declared in the UI.
+6. **Suomi-NPP excluded**: transmissions ceased 2026-11-02 13:00 UTC (NASA Earthdata alert). VIIRS uses NOAA-20 + NOAA-21.
+
+### Declared limits
+
+No burned-area estimate · no causality inference · discrete overpasses (~2/day) · no cloud mask in this product.
+
+---
+
+## Estructura / Repository layout
+
+```
+scripts/
+  ingest_firms.py            ingesta + armonización (CSV públicos, sin clave)
+  backfill_firms.py          backfill histórico multianual (FIRMS Area API)
+  validate_standalone.py     validador del HTML standalone (corre en CI)
+data/
+  samples/calendar.json      muestra versionada que usa la demo
+docs/
+  METHOD.md                  método, fórmulas, citas y límites
+  DATA-CONTRACT.md           contrato del JSON y trampas conocidas
+  prompt-pack.md             cuaderno de fuentes oficiales y prompts
+web/                         aplicación Next.js (calendario, mapa, ficha)
+```
+
+## Datos y créditos / Data & credits
+
+- [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) — focos activos MODIS C6.1 y VIIRS C2
+- [NASA Earthdata](https://urs.earthdata.nasa.gov/) — acceso e imágenes
+- Desafío / Challenge: **NASA Space Apps Challenge 2026**, autora **Marina Companuchi (CONAE)**
+
+## Licencia / License
+
+MIT — ver [LICENSE](LICENSE).
