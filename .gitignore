@@ -1,0 +1,41 @@
+# Node
+node_modules/
+.pnp
+.pnp.js
+.next/
+out/
+build/
+dist/
+.vercel/
+
+# Env
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Salidas regenerables del pipeline
+salida/
+salida_*/
+*.log
+
+# Datos crudos de FIRMS (se regeneran con el script)
+data/raw/
+
+# Muestras que SÍ se versionan
+!data/samples/calendar.json
+!data/samples/harmonized_head.csv
+
+# SO / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

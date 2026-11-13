@@ -1,0 +1,17 @@
+IGNIS - resumen de armonizacion
+Generado: 2026-11-13T02:10:16
+Region: South_America | dias: 7 | rejilla: 0.05 deg
+
+Focos MODIS : 2303
+Focos VIIRS : 7697
+Ratio VIIRS/MODIS: 3.34x
+
+Celdas con datos MODIS: 1161
+Celdas con datos VIIRS: 2232
+Celdas-dia detectadas por AMBOS sensores: 535 (13.5%)
+Celdas-dia solo MODIS: 934 (23.5%)
+Celdas-dia solo VIIRS: 2508 (63.1%)
+
+Lectura: la discrepancia entre 'solo MODIS' y 'solo VIIRS' es exactamente
+el problema que el desafio pide resolver. No es ruido: es resolucion espacial,
+hora de sobrevuelo y escala de confianza distintas.

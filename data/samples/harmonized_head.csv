@@ -1,0 +1,7 @@
+date,cell_lat,cell_lon,sensor,n_focos,frp_max_MW,frp_sum_MW,frp_density_MW_km2,conf_mean,n_day,n_night,both_sensors
+date,cell_lat,cell_lon,sensor,n_focos,frp_max_MW,frp_sum_MW,frp_density_MW_km2,conf_mean,n_day,n_night,both_sensors
+2026-11-05,-52.625,-68.125,VIIRS,1,0.7,0.7,4.978,60.0,0,1,0
+2026-11-05,-40.225,-64.125,VIIRS,1,0.55,0.55,3.911,60.0,0,1,0
+2026-11-05,-39.625,-62.325,MODIS,1,21.85,21.85,21.85,72.0,1,0,0
+2026-11-05,-39.325,-72.525,VIIRS,1,4.49,4.49,31.929,60.0,1,0,0
+2026-11-05,-39.025,-67.875,MODIS,1,17.73,17.73,17.73,75.0,1,0,1
