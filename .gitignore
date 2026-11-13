@@ -24,6 +24,7 @@ env/
 # Salidas regenerables del pipeline
 salida/
 salida_*/
+cache_firms/
 *.log
 
 # Datos crudos de FIRMS (se regeneran con el script)

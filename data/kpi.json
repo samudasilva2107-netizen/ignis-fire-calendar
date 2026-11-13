@@ -1,0 +1,52 @@
+{
+  "generado": "2026-11-13T04:19:27",
+  "aoi": {
+    "region": "South_America",
+    "bbox": [
+      -35.0,
+      -68.5,
+      -22.0,
+      -56.0
+    ],
+    "step_deg": 0.05,
+    "ventana": [
+      "2026-11-05",
+      "2026-11-12"
+    ],
+    "n_dias": 8
+  },
+  "plataformas": {
+    "MODIS": [
+      "T",
+      "A"
+    ],
+    "VIIRS": [
+      "N20",
+      "N21"
+    ]
+  },
+  "totales": {
+    "detecciones": 13872,
+    "modis": 1952,
+    "viirs": 11920,
+    "frp_total_mw": 292140.7,
+    "frp_modis_mw": 95309.5,
+    "frp_viirs_mw": 196831.2
+  },
+  "ratios": {
+    "viirs_modis": 6.11
+  },
+  "frp_medio_mw": {
+    "modis": 48.83,
+    "viirs": 16.51
+  },
+  "coincidencia_celda_dia": {
+    "ambos": 575,
+    "solo_modis": 639,
+    "solo_viirs": 2729,
+    "pct_ambos": 14.6,
+    "pct_solo_modis": 16.2,
+    "pct_solo_viirs": 69.2
+  },
+  "nota": "Coincidencia dependiente del AOI y de la ventana. No es un valor universal."
+}

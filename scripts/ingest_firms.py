@@ -36,6 +36,8 @@ from datetime import datetime
 BASE = "https://firms.modaps.eosdis.nasa.gov/data/active_fire"
 SOURCES = {
     "MODIS": {
+        "id": "MOD",
+        "sensor": "MODIS",
         "url": "{base}/modis-c6.1/csv/MODIS_C6_1_{region}_{days}d.csv",
         "lat": "latitude", "lon": "longitude",
         "date": "acq_date", "time": "acq_time",
@@ -45,12 +47,28 @@ SOURCES = {
         "conf_mode": "numeric",    # 0..100
     },
     "VIIRS": {
+        "id": "J1",
+        "sensor": "VIIRS",
         "url": "{base}/noaa-20-viirs-c2/csv/J1_VIIRS_C2_{region}_{days}d.csv",
         "lat": "latitude", "lon": "longitude",
         "date": "acq_date", "time": "acq_time",
         "frp": "frp", "conf": "confidence", "dn": "daynight",
         "bt": "bright_ti4", "sat": "satellite",
         "pixel_km2": 0.375 * 0.375,  # 0.140625 km2
+        "conf_mode": "categorical",
+    },
+    # NOAA-21 (JPSS-2): segundo VIIRS operativo desde 2024-01.
+    # Suomi-NPP CESÓ el 2026-11-02 13:00 UTC (alerta oficial NASA Earthdata):
+    # sus CSV vienen vacios, no se incluye.
+    "VIIRS_N21": {
+        "id": "J2",
+        "sensor": "VIIRS",
+        "url": "{base}/noaa-21-viirs-c2/csv/J2_VIIRS_C2_{region}_{days}d.csv",
+        "lat": "latitude", "lon": "longitude",
+        "date": "acq_date", "time": "acq_time",
+        "frp": "frp", "conf": "confidence", "dn": "daynight",
+        "bt": "bright_ti4", "sat": "satellite",
+        "pixel_km2": 0.375 * 0.375,
         "conf_mode": "categorical",
     },
 }
@@ -160,7 +178,8 @@ def main():
                 continue
             dates.add(r["date"])
             cell = cell_of(r["lat"], r["lon"], step)
-            key = (cell[0], cell[1], r["date"], name)
+            sens = spec["sensor"]
+            key = (cell[0], cell[1], r["date"], sens)
             a = agg[key]
             a["n"] += 1
             a["frp_max"] = max(a["frp_max"], r["frp"])
@@ -171,7 +190,7 @@ def main():
                 a["d"] += 1
             else:
                 a["n_night"] += 1
-            cells_seen[(cell[0], cell[1], r["date"])].add(name)
+            cells_seen[(cell[0], cell[1], r["date"])].add(sens)
 
     # ---- 3. harmonized.csv
     hpath = os.path.join(args.outdir, "harmonized.csv")
@@ -198,11 +217,16 @@ def main():
     for (clat, clon, date, sensor), a in agg.items():
         c = cell_map[(clat, clon)]
         c["lat"], c["lon"] = clat, clon
-        d = c["days"].setdefault(date, {"n": 0, "frp_max": 0.0, "sensores": []})
+        d = c["days"].setdefault(date, {"n": 0, "frp_max": 0.0, "sensores": [], "por_sensor": {}})
         d["n"] += a["n"]
         d["frp_max"] = round(max(d["frp_max"], a["frp_max"]), 2)
         if sensor not in d["sensores"]:
             d["sensores"].append(sensor)
+        d["por_sensor"][sensor] = {
+            "n": a["n"],
+            "frp_sum": round(a["frp_sum"], 2),
+            "frp_max": round(a["frp_max"], 2)
+        }
     cpath = os.path.join(args.outdir, "calendar.json")
     with open(cpath, "w", encoding="utf-8") as f:
         json.dump({"step_deg": step, "days": days, "cells": [
@@ -246,7 +270,50 @@ def main():
     rpath = os.path.join(args.outdir, "resumen.txt")
     with open(rpath, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
-    print(f"-> {rpath}\n")
+    print(f"-> {rpath}")
+
+    # ---- 6. kpi.json  (la app NO debe hardcodear estos numeros: los lee de aca o los deriva)
+    def frp_of(name):
+        return sum(a["frp_sum"] for (cl, cn, dt, s), a in agg.items() if s == name)
+
+    f_mod, f_vi = frp_of("MODIS"), frp_of("VIIRS")
+    kpi = {
+        "generado": datetime.now().isoformat(timespec="seconds"),
+        "aoi": {
+            "region": args.region,
+            "bbox": args.bbox,
+            "step_deg": step,
+            "ventana": [min(days), max(days)] if days else [],
+            "n_dias": len(days),
+        },
+        "plataformas": {"MODIS": ["T", "A"], "VIIRS": ["N20", "N21"]},
+        "totales": {
+            "detecciones": n_mod + n_vi,
+            "modis": n_mod,
+            "viirs": n_vi,
+            "frp_total_mw": round(f_mod + f_vi, 1),
+            "frp_modis_mw": round(f_mod, 1),
+            "frp_viirs_mw": round(f_vi, 1),
+        },
+        "ratios": {"viirs_modis": round(n_vi / max(n_mod, 1), 2)},
+        "frp_medio_mw": {
+            "modis": round(f_mod / max(n_mod, 1), 2),
+            "viirs": round(f_vi / max(n_vi, 1), 2),
+        },
+        "coincidencia_celda_dia": {
+            "ambos": both,
+            "solo_modis": only_mod,
+            "solo_viirs": only_vi,
+            "pct_ambos": round(100 * both / tot, 1),
+            "pct_solo_modis": round(100 * only_mod / tot, 1),
+            "pct_solo_viirs": round(100 * only_vi / tot, 1),
+        },
+        "nota": "Coincidencia dependiente del AOI y de la ventana. No es un valor universal.",
+    }
+    kpath = os.path.join(args.outdir, "kpi.json")
+    with open(kpath, "w", encoding="utf-8") as f:
+        json.dump(kpi, f, ensure_ascii=False, indent=2)
+    print(f"-> {kpath}")
     print("\n".join(lines))
 
 
