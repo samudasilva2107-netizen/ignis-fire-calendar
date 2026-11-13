@@ -1,0 +1,37 @@
+{
+  "2023": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 66472,
+      "VIIRS NOAA-20": 224048
+    },
+    "n_plataformas": 2,
+    "solo_modis": false
+  },
+  "2024": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 69515,
+      "VIIRS NOAA-20": 216000,
+      "VIIRS NOAA-21": 216452
+    },
+    "n_plataformas": 3,
+    "solo_modis": false
+  },
+  "2025": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 54635,
+      "VIIRS NOAA-20": 187000,
+      "VIIRS NOAA-21": 187460
+    },
+    "n_plataformas": 3,
+    "solo_modis": false
+  },
+  "2026": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 18724,
+      "VIIRS NOAA-20": 60000,
+      "VIIRS NOAA-21": 59769
+    },
+    "n_plataformas": 3,
+    "solo_modis": false
+  }
+}

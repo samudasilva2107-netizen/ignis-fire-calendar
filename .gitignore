@@ -26,6 +26,7 @@ salida/
 salida_*/
 cache_firms/
 *.log
+web/public/data/calendar.json
 
 # Datos crudos de FIRMS (se regeneran con el script)
 data/raw/

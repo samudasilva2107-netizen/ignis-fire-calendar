@@ -1,11 +1,15 @@
 import React, { useState, useMemo } from "react";
-import { CalendarContract } from "../types/ignis";
+import { DailyRow, EraPlatform } from "../types/ignis";
 import { formatInt, formatWindowShort } from "../lib/kpi";
 
 interface CalendarMatrixProps {
-  calendar: CalendarContract;
+  daily: DailyRow[];
+  eras?: Record<string, EraPlatform> | null;
   selectedDate: string | null;
   onSelectDate: (date: string | null) => void;
+  selectedYear: number;
+  onSelectYear: (year: number) => void;
+  lang?: "es" | "en";
 }
 
 function getFRPColor(frp: number): string {
@@ -16,26 +20,41 @@ function getFRPColor(frp: number): string {
   return "#991B1B";
 }
 
+const MONTH_NAMES_ES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+];
+const MONTH_NAMES_EN = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
 export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
-  calendar,
+  daily,
+  eras,
   selectedDate,
   onSelectDate,
+  selectedYear,
+  onSelectYear,
+  lang = "es",
 }) => {
   const [selectedMonth, setSelectedMonth] = useState<number>(11);
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [calendarViewMode, setCalendarViewMode] = useState<"month" | "interannual">("month");
 
-  // Precomputación ultra-eficiente O(celdas) para renderizado instantáneo
-  const { dailyStats, anomalies } = useMemo(() => {
+  // Precomputación ultra-eficiente O(daily) para renderizado instantáneo
+  const { dailyStats, anomalies, availableYears, allDays } = useMemo(() => {
     const stats: Record<string, { n: number; maxFRP: number }> = {};
+    const daysSet = new Set<string>();
+    const yearsSet = new Set<number>();
 
-    calendar.cells.forEach((c) => {
-      if (!c.days) return;
-      Object.entries(c.days).forEach(([dt, m]) => {
-        if (!stats[dt]) stats[dt] = { n: 0, maxFRP: 0 };
-        stats[dt].n += m.n;
-        if (m.frp_max > stats[dt].maxFRP) stats[dt].maxFRP = m.frp_max;
-      });
+    daily.forEach((r) => {
+      daysSet.add(r.d);
+      const y = parseInt(r.d.slice(0, 4), 10);
+      if (!isNaN(y)) yearsSet.add(y);
+      stats[r.d] = {
+        n: r.n,
+        maxFRP: Math.round(r.fm + r.fv),
+      };
     });
 
     const frpValues = Object.values(stats).map((s) => s.maxFRP).sort((a, b) => a - b);
@@ -47,28 +66,33 @@ export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
       anomalyMap[dt] = s.maxFRP >= p90Threshold && s.maxFRP > 0;
     });
 
-    return { dailyStats: stats, anomalies: anomalyMap };
-  }, [calendar]);
+    const years = Array.from(yearsSet).sort((a, b) => b - a);
 
-  // Años soportados y disponibles en runtime
-  const supportedYears = [2026, 2025, 2024, 2023];
-  const availableYears = useMemo(() => {
-    return Array.from(new Set((calendar.days || []).map((d) => parseInt(d.slice(0, 4), 10)))).sort((a, b) => b - a);
-  }, [calendar.days]);
+    return {
+      dailyStats: stats,
+      anomalies: anomalyMap,
+      availableYears: years.length > 0 ? years : [2026],
+      allDays: Array.from(daysSet).sort(),
+    };
+  }, [daily]);
+
+  const monthNames = lang === "es" ? MONTH_NAMES_ES : MONTH_NAMES_EN;
 
   return (
     <div className="bg-ignis-surface border border-ignis-border rounded-lg p-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-ignis-border pb-3 gap-3">
         <div>
           <div className="font-bold text-xs uppercase tracking-wider text-ignis-text">
-            Matriz de Calendario de Actividad
+            {lang === "es" ? "Matriz de Calendario de Actividad" : "Fire Activity Calendar Matrix"}
           </div>
           <div className="text-[11px] text-ignis-muted mt-0.5">
-            Armonización histórica multianual: tendencias, anomalías (p90) y estacionalidad de fuego
+            {lang === "es"
+              ? "Armonización histórica multianual: tendencias, anomalías (p90) y estacionalidad de fuego"
+              : "Multi-year historical harmonization: trends, p90 anomalies and fire seasonality"}
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Selector de Modo de Vista */}
           <div className="flex gap-1 bg-ignis-bg p-0.5 rounded-md border border-ignis-border">
             <button
@@ -79,7 +103,7 @@ export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
                   : "text-ignis-muted hover:text-white"
               }`}
             >
-              Vista Mensual
+              {lang === "es" ? "Vista Mensual" : "Monthly View"}
             </button>
             <button
               onClick={() => setCalendarViewMode("interannual")}
@@ -89,32 +113,26 @@ export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
                   : "text-ignis-muted hover:text-white"
               }`}
             >
-              Comparativa Interanual
+              {lang === "es" ? "Comparativa Interanual" : "Interannual Comparison"}
             </button>
           </div>
 
-          {/* Selector de Año dinámico (M3: disabled + tooltip para años sin datos) */}
-          <div className="flex gap-1 bg-ignis-bg p-0.5 rounded-md border border-ignis-border">
-            {supportedYears.map((y) => {
-              const hasData = availableYears.includes(y);
-              return (
-                <button
-                  key={y}
-                  disabled={!hasData}
-                  onClick={() => hasData && setSelectedYear(y)}
-                  title={hasData ? `Año ${y}` : `Año ${y}: backfill histórico pendiente`}
-                  className={`px-2 py-0.5 rounded text-[11px] font-mono transition ${
-                    selectedYear === y
-                      ? "bg-[#21262D] text-white border border-ignis-accent font-bold"
-                      : hasData
-                      ? "text-ignis-muted hover:text-white"
-                      : "text-ignis-muted opacity-40 cursor-not-allowed"
-                  }`}
-                >
+          {/* Selector de Año dinámico (26 años soportados sin hardcode) */}
+          <div className="flex items-center gap-1 bg-ignis-bg px-2 py-0.5 rounded-md border border-ignis-border">
+            <span className="text-[10px] font-mono text-ignis-muted uppercase">
+              {lang === "es" ? "Año:" : "Year:"}
+            </span>
+            <select
+              value={selectedYear}
+              onChange={(e) => onSelectYear(Number(e.target.value))}
+              className="bg-transparent text-[11px] font-mono text-white font-bold outline-none cursor-pointer"
+            >
+              {availableYears.map((y) => (
+                <option key={y} value={y} className="bg-[#161B22] text-white">
                   {y}
-                </button>
-              );
-            })}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Selector de Mes */}
@@ -123,17 +141,11 @@ export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
             onChange={(e) => setSelectedMonth(Number(e.target.value))}
             className="px-2.5 py-1 bg-ignis-surface border border-ignis-border rounded-md text-[11px] font-mono text-ignis-text"
           >
-            <option value={11}>Noviembre (Ventana activa)</option>
-            <option value={10}>Octubre</option>
-            <option value={9}>Septiembre</option>
-            <option value={8}>Agosto</option>
-            <option value={7}>Julio (Caso Chilecito)</option>
-            <option value={6}>Junio</option>
-            <option value={5}>Mayo</option>
-            <option value={4}>Abril</option>
-            <option value={3}>Marzo</option>
-            <option value={2}>Febrero</option>
-            <option value={1}>Enero</option>
+            {monthNames.map((name, idx) => (
+              <option key={idx + 1} value={idx + 1}>
+                {name} {idx === 10 ? (lang === "es" ? "(Ventana activa)" : "(Active window)") : ""}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -141,14 +153,14 @@ export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
       {/* Leyenda técnica oficial */}
       <div className="flex flex-wrap justify-between items-center my-2.5 text-[11px] text-ignis-muted gap-2">
         <div className="flex flex-wrap gap-3 items-center">
-          <span>Escala FRP:</span>
+          <span>{lang === "es" ? "Escala FRP:" : "FRP Scale:"}</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[2px] bg-[#1E232A]"></span> 0 MW</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[2px] bg-[#D97706]"></span> ≤ 50 MW</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[2px] bg-[#EA580C]"></span> ≤ 250 MW</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[2px] bg-[#DC2626]"></span> ≤ 1000 MW</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[2px] bg-[#991B1B]"></span> &gt; 1000 MW</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[2px] stripe-nodata border border-ignis-border"></span> Sin datos</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[2px] border border-dashed border-ignis-accent"></span> Anomalía p90</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[2px] stripe-nodata border border-ignis-border"></span> {lang === "es" ? "Sin datos" : "No data"}</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[2px] border border-dashed border-ignis-accent"></span> {lang === "es" ? "Anomalía p90" : "p90 Anomaly"}</span>
         </div>
 
         {selectedDate && (
@@ -156,7 +168,7 @@ export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
             onClick={() => onSelectDate(null)}
             className="text-[11px] font-mono text-ignis-accent hover:underline"
           >
-            Ver ventana completa ({formatWindowShort(calendar.days)})
+            {lang === "es" ? "Ver ventana completa" : "View full window"} ({formatWindowShort(allDays)})
           </button>
         )}
       </div>
@@ -164,16 +176,31 @@ export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
       {/* Contenedor dinámico */}
       {calendarViewMode === "interannual" ? (
         <div className="mt-3">
-          <div className="font-mono text-xs text-ignis-muted mb-2.5">
-            COMPARATIVA INTERANUAL DEL MES SELECCIONADO A TRAVÉS DE LOS AÑOS:
+          <div className="font-mono text-xs text-ignis-muted mb-2.5 flex justify-between items-center">
+            <span>
+              {lang === "es"
+                ? `COMPARATIVA INTERANUAL DE ${monthNames[selectedMonth - 1]?.toUpperCase()} A TRAVÉS DE LOS AÑOS:`
+                : `INTERANNUAL COMPARISON FOR ${monthNames[selectedMonth - 1]?.toUpperCase()} ACROSS YEARS:`}
+            </span>
+            <span className="text-[10px] text-ignis-muted">
+              {availableYears.length} {lang === "es" ? "años registrados" : "recorded years"}
+            </span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            {supportedYears.map((y) => {
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
+            {availableYears.map((y) => {
               const mPrefix = String(selectedMonth).padStart(2, "0");
               const prefix = `${y}-${mPrefix}`;
-              const daysInMonthYear = (calendar.days || []).filter((d) => d.startsWith(prefix));
+              const daysInMonthYear = allDays.filter((d) => d.startsWith(prefix));
               let foci = 0;
               let maxFRP = 0;
+
+              const era = eras ? eras[String(y)] : null;
+              const isSoloModis = era ? era.solo_modis : y < 2012;
+              const platCount = era ? era.n_plataformas : (y < 2012 ? 1 : (y < 2018 ? 2 : (y < 2024 ? 3 : 4)));
+              const platTooltip = era
+                ? Object.keys(era.plataformas).join(", ")
+                : (isSoloModis ? "MODIS (Terra/Aqua)" : "MODIS + VIIRS");
 
               if (daysInMonthYear.length > 0) {
                 daysInMonthYear.forEach((dt) => {
@@ -185,34 +212,82 @@ export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
                 });
 
                 return (
-                  <div key={y} className="bg-[#1c2128] border border-ignis-accent rounded p-3">
-                    <div className="text-[10px] uppercase font-mono text-ignis-muted">Año {y}</div>
-                    <div className="font-mono text-xl font-bold text-white mt-1">{formatInt(foci)}</div>
-                    <div className="text-[10px] font-mono text-ignis-muted mt-1">
-                      {daysInMonthYear.length} días · {Math.round(maxFRP)} MW máx
+                  <div
+                    key={y}
+                    onClick={() => {
+                      onSelectYear(y);
+                      setCalendarViewMode("month");
+                    }}
+                    className={`bg-[#1c2128] border rounded p-2.5 cursor-pointer hover:border-ignis-accent transition flex flex-col justify-between ${
+                      selectedYear === y ? "border-ignis-accent ring-1 ring-ignis-accent" : "border-ignis-border"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] uppercase font-mono font-bold text-white">{y}</span>
+                        <span
+                          title={`Plataformas satelitales: ${platTooltip}`}
+                          className={`text-[9px] font-mono px-1 py-0.2 rounded border ${
+                            isSoloModis
+                              ? "bg-[#271E14] text-[#D97706] border-[#D97706]/40"
+                              : "bg-[#21262D] text-ignis-muted border-ignis-border"
+                          }`}
+                        >
+                          {platCount} plat.
+                        </span>
+                      </div>
+                      <div className="font-mono text-base font-bold text-white mt-1">
+                        {formatInt(foci)}
+                      </div>
+                    </div>
+
+                    <div className="mt-1.5 pt-1 border-t border-ignis-border/40">
+                      <div className="text-[9px] font-mono text-ignis-muted">
+                        {daysInMonthYear.length}d · {Math.round(maxFRP)} MW
+                      </div>
+                      {isSoloModis && (
+                        <div className="text-[8px] font-mono text-[#D97706] mt-0.5 leading-tight">
+                          {lang === "es" ? "sólo MODIS: sin VIIRS" : "MODIS only: no VIIRS"}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
               } else {
                 return (
-                  <div key={y} className="stripe-nodata border border-ignis-border rounded p-3 opacity-60">
-                    <div className="text-[10px] uppercase font-mono text-ignis-muted">Año {y}</div>
-                    <div className="font-mono text-sm font-bold text-ignis-muted mt-1">Pendiente</div>
-                    <div className="text-[10px] font-mono text-ignis-muted mt-1">Requiere backfill SP</div>
+                  <div key={y} className="stripe-nodata border border-ignis-border rounded p-2.5 opacity-60">
+                    <div className="text-[10px] uppercase font-mono text-ignis-muted">{y}</div>
+                    <div className="font-mono text-xs font-bold text-ignis-muted mt-1">
+                      {lang === "es" ? "Sin datos" : "No data"}
+                    </div>
                   </div>
                 );
               }
             })}
           </div>
-          <div className="mt-2.5 text-[11px] font-mono text-ignis-muted">
-            Esta vista responde textualmente la pregunta de Marina Companuchi: <em>«cuántos focos tuvo un mes a través de distintos años»</em>.
+
+          <div className="mt-3 text-[11px] font-mono text-ignis-muted bg-ignis-bg p-2.5 rounded border border-ignis-border flex flex-col sm:flex-row justify-between gap-2">
+            <div>
+              {lang === "es"
+                ? "Esta vista responde textualmente la pregunta de Marina Companuchi: «cuántos focos tuvo un mes a través de distintos años»."
+                : "This view directly answers Marina Companuchi's question: «how many fire foci occurred in a specific month across different years»."}
+            </div>
+            <div className="text-[#D97706]">
+              {lang === "es"
+                ? "Nota: Años < 2012 reflejan sólo MODIS (1 km). Los escalones en 2012, 2018 y 2024 corresponden a nuevas plataformas, no a más fuego."
+                : "Note: Years < 2012 reflect MODIS only (1 km). Steps in 2012, 2018 and 2024 reflect new satellite instruments, not more fire."}
+            </div>
           </div>
         </div>
       ) : (
         <>
           {/* Días de la semana */}
           <div className="grid grid-cols-7 gap-1.5 text-center font-mono text-[11px] text-ignis-muted py-1 border-t border-ignis-border/60">
-            <div>LUN</div><div>MAR</div><div>MIÉ</div><div>JUE</div><div>VIE</div><div>SÁB</div><div>DOM</div>
+            {(lang === "es" ? ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"] : ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]).map(
+              (dayName) => (
+                <div key={dayName}>{dayName}</div>
+              )
+            )}
           </div>
 
           {/* Rejilla mensual dinámica */}
@@ -230,12 +305,12 @@ export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
             }).map((_, i) => {
               const dayNum = i + 1;
               const dayStr = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
-              const hasData = calendar.days.includes(dayStr);
+              const dayStat = dailyStats[dayStr];
+              const hasData = Boolean(dayStat && dayStat.n > 0);
               const isSelected = selectedDate === dayStr;
               const isAnomaly = anomalies[dayStr];
 
               if (hasData) {
-                const dayStat = dailyStats[dayStr];
                 const dayFoci = dayStat ? dayStat.n : 0;
                 const maxFRP = dayStat ? dayStat.maxFRP : 0;
                 const color = getFRPColor(maxFRP);
@@ -263,7 +338,7 @@ export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
                     </div>
                     <div>
                       <div className="font-mono text-sm font-bold text-white">{formatInt(dayFoci)}</div>
-                      <div className="font-mono text-[10px] text-ignis-muted">{formatInt(maxFRP)} MW máx</div>
+                      <div className="font-mono text-[10px] text-ignis-muted">{formatInt(maxFRP)} MW</div>
                     </div>
                   </button>
                 );
@@ -272,10 +347,10 @@ export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
                   <div
                     key={dayStr}
                     className="h-[76px] stripe-nodata border border-ignis-border/50 rounded-[2px] p-2 flex flex-col justify-between opacity-60 cursor-not-allowed"
-                    title="Sin datos satelitales en esta fecha"
+                    title={lang === "es" ? "Sin datos satelitales en esta fecha" : "No satellite data on this date"}
                   >
                     <span className="font-mono text-xs text-ignis-muted">{dayNum}</span>
-                    <span className="font-mono text-[10px] text-ignis-muted">Sin datos</span>
+                    <span className="font-mono text-[10px] text-ignis-muted">{lang === "es" ? "Sin datos" : "No data"}</span>
                   </div>
                 );
               }

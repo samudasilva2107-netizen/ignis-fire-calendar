@@ -23,6 +23,23 @@ export interface CalendarContract {
   cells: GridCell[];
 }
 
+export interface DailyRow {
+  d: string;   // "2026-11-05"
+  n: number;   // detecciones totales
+  m: number;   // MODIS
+  v: number;   // VIIRS
+  fm: number;  // FRP suma MODIS (MW)
+  fv: number;  // FRP suma VIIRS (MW)
+  am: number;  // celdas-día con ambos sensores
+  cd: number;  // celdas-día totales
+}
+
+export interface EraPlatform {
+  plataformas: Record<string, number>;
+  n_plataformas: number;
+  solo_modis: boolean;
+}
+
 export interface CalculatedKPIs {
   totalDetecciones: number;
   modisDetecciones: number;

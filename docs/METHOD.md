@@ -51,11 +51,23 @@ Un día sin detecciones puede significar: (a) no hubo fuego, (b) no hubo sobrepa
 
 Es una aproximación, y está declarada como tal.
 
-## 4. Continuidad: el argumento central
+## 4. Continuidad y Épocas Satelitales: el argumento central
 
-MODIS está saliendo de su vida operativa. Suomi-NPP **cesó transmisiones el 2026-11-02 a las 13:00 UTC** (alerta oficial de NASA Earthdata), lo que deja a VIIRS con dos plataformas (NOAA-20 y NOAA-21).
+La serie temporal de detección satelital cubre más de dos décadas y media, durante las cuales la constelación fue incorporando sensores con resoluciones geométricas dispares:
 
-Una serie que mezcle sensores sin armonizar **se corta** en ese punto. Una serie armonizada sobre rejilla común, con FRP normalizado y procedencia conservada, **continúa**: cada punto sigue siendo comparable aunque cambie el instrumento que lo produjo.
+| Época | Plataformas Activas | Resolución Mínima | Sensores Operativos |
+|---|---|---|---|
+| **2000 – 2002** | Terra (MODIS) | 1.000 m | Sólo MODIS (1 plataforma) |
+| **2002 – 2012** | Terra + Aqua (MODIS) | 1.000 m | MODIS bicúspide (2 plataformas) |
+| **2012 – 2018** | Terra + Aqua + Suomi-NPP | 375 m | MODIS + VIIRS (3 plataformas) |
+| **2018 – 2024** | Terra + Aqua + NPP + NOAA-20 | 375 m | MODIS + VIIRS (4 plataformas) |
+| **2024 – 2026** | Terra + Aqua + NPP + N20 + NOAA-21 | 375 m | MODIS + VIIRS (5 plataformas) |
+
+> **Principio de interpretación:** *«Los escalones del gráfico en 2002, 2012, 2018 y 2024 no son más incendios: son instrumentos nuevos. Ese es exactamente el artefacto que este proyecto existe para corregir.»*
+
+MODIS está saliendo de su vida operativa. Suomi-NPP **cesó transmisiones el 2026-11-02 a las 13:00 UTC** (alerta oficial de NASA Earthdata), lo que deja a VIIRS con dos plataformas principales (NOAA-20 y NOAA-21).
+
+Una serie que mezcle sensores sin armonizar **se corta** en ese punto y genera saltos artificiales. Una serie armonizada sobre rejilla común, con FRP normalizado y procedencia conservada, **continúa**: cada punto sigue siendo comparable aunque cambie el instrumento que lo produjo.
 
 Ese es el objetivo de la autora del desafío: *«que al final no importe si un foco vino de un sensor o del otro; el foco real está en las tendencias, anomalías y patrones»*.
 

@@ -62,16 +62,16 @@ export const FireMap: React.FC<FireMapProps> = ({
         const cartoKey =
           process.env.NEXT_PUBLIC_CARTO_KEY ||
           process.env.NEXT_PUBLIC_CARTO_API_KEY ||
-          "cb1_4iou_1_ac2dff443ff050beb7a80e54";
-        const cartoLayer = L.tileLayer(
-          `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${cartoKey}`,
-          {
-            subdomains: "abcd",
-            maxZoom: 19,
-            attribution:
-              '&copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
-          }
-        ).addTo(map);
+          "";
+        const cartoUrl = cartoKey
+          ? `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${cartoKey}`
+          : "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}";
+        const cartoLayer = L.tileLayer(cartoUrl, {
+          subdomains: "abcd",
+          maxZoom: 19,
+          attribution:
+            '&copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+        }).addTo(map);
 
         // Fallback a Esri Dark Canvas si fallara CARTO
         cartoLayer.on("tileerror", () => {
@@ -194,7 +194,7 @@ export const FireMap: React.FC<FireMapProps> = ({
           <span className="font-mono text-xs text-ignis-muted ml-2">
             {selectedDate
               ? `[Día: ${selectedDate}]`
-              : `[Ventana completa: ${days ? days.length : 8} días]`}
+              : `[Ventana completa: ${days && days.length > 0 ? `${days.length} días` : 'Serie histórica'}]`}
           </span>
         </div>
 

@@ -1,16 +1,14 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { Navbar } from "../components/Navbar";
 import { KPICards } from "../components/KPICards";
 import { CalendarMatrix } from "../components/CalendarMatrix";
 import { DayDetails } from "../components/DayDetails";
 import { AuditPanel } from "../components/AuditPanel";
-import { CalendarContract } from "../types/ignis";
-import { calculateKPIsFromCalendar } from "../lib/kpi";
-
-import calendarJson from "../../public/data/calendar.json";
+import { DailyRow, EraPlatform, GridCell } from "../types/ignis";
+import { calculateKPIsFromDaily, formatWindowShort } from "../lib/kpi";
 
 const FireMap = dynamic(
   () => import("../components/FireMap").then((mod) => mod.FireMap),
@@ -25,63 +23,92 @@ const FireMap = dynamic(
 );
 
 export default function Home() {
-  const calendarData = calendarJson as unknown as CalendarContract;
-
-  // Runtime calculation of authoritative KPIs
-  const kpis = useMemo(() => {
-    return calculateKPIsFromCalendar(calendarData);
-  }, [calendarData]);
-
+  const [daily, setDaily] = useState<DailyRow[] | null>(null);
+  const [eras, setEras] = useState<Record<string, EraPlatform> | null>(null);
+  const [yearCells, setYearCells] = useState<Record<string, GridCell[]>>({});
+  const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [lang, setLang] = useState<"es" | "en">("es");
+
+  // 1. Cargar el agregado diario y épocas (Fix 2.3 de PLAN-DEV.md: peso < 1 MB en lugar de 58 MB)
+  useEffect(() => {
+    fetch("/data/daily.json")
+      .then((r) => r.json())
+      .then(setDaily)
+      .catch((err) => {
+        console.error("Error al cargar daily.json:", err);
+        setDaily([]);
+      });
+
+    fetch("/data/eras.json")
+      .then((r) => r.json())
+      .then(setEras)
+      .catch(() => setEras({}));
+  }, []);
+
+  // 2. Lazy loading de celdas por año solo cuando se requiere para el mapa (Fix 2.5)
+  useEffect(() => {
+    const yr = String(selectedYear);
+    if (!selectedYear || yearCells[yr]) return;
+
+    fetch(`/data/calendar-${yr}.json`)
+      .then((r) => r.json())
+      .then((d) => {
+        setYearCells((prev) => ({ ...prev, [yr]: d.cells || [] }));
+      })
+      .catch(() => {
+        setYearCells((prev) => ({ ...prev, [yr]: [] }));
+      });
+  }, [selectedYear, yearCells]);
+
+  // 3. KPIs calculados ultra-rápidos desde daily (Fix 2.4)
+  const kpis = useMemo(() => {
+    if (!daily || daily.length === 0) return null;
+    return calculateKPIsFromDaily(daily);
+  }, [daily]);
+
+  // Días disponibles
+  const availableDays = useMemo(() => {
+    return daily ? daily.map((r) => r.d) : [];
+  }, [daily]);
+
+  // Fila diaria seleccionada
+  const selectedDailyRow = useMemo(() => {
+    if (!selectedDate || !daily) return null;
+    return daily.find((r) => r.d === selectedDate) || null;
+  }, [selectedDate, daily]);
+
+  // Celdas del año activo
+  const activeCells = useMemo(() => {
+    return yearCells[String(selectedYear)] || [];
+  }, [selectedYear, yearCells]);
 
   // Exportar Analytics CSV (M1: denominador unificado · M2: BOM + Blob para Excel Windows)
   const handleExportCSV = () => {
-    const days = calendarData.days || [];
+    if (!daily || daily.length === 0) return;
     const rows = [
-      ["fecha", "n_total", "n_modis", "n_viirs", "frp_max_MW", "frp_sum_MW", "coincidencia_ambos_pct", "celdas_activas"]
+      ["fecha", "n_total", "n_modis", "n_viirs", "frp_suma_modis_MW", "frp_suma_viirs_MW", "coincidencia_ambos_celdas", "total_celdas_dia"]
     ];
 
-    days.forEach((d) => {
-      let nTotal = 0, nMod = 0, nVii = 0;
-      let frpMax = 0, frpSum = 0;
-      let both = 0, onlyMod = 0, onlyVii = 0;
-
-      calendarData.cells.forEach((c) => {
-        const m = c.days[d];
-        if (m && m.n > 0) {
-          nTotal += m.n;
-          frpMax = Math.max(frpMax, m.frp_max);
-          if (m.por_sensor) {
-            if (m.por_sensor.MODIS) {
-              nMod += m.por_sensor.MODIS.n;
-              frpSum += m.por_sensor.MODIS.frp_sum;
-            }
-            if (m.por_sensor.VIIRS) {
-              nVii += m.por_sensor.VIIRS.n;
-              frpSum += m.por_sensor.VIIRS.frp_sum;
-            }
-          }
-          const hasM = m.sensores && m.sensores.includes("MODIS");
-          const hasV = m.sensores && m.sensores.includes("VIIRS");
-          if (hasM && hasV) both++;
-          else if (hasM) onlyMod++;
-          else if (hasV) onlyVii++;
-        }
-      });
-
-      // M1: Mismo denominador oficial del KPI y la pantalla
-      const totCellDays = both + onlyMod + onlyVii;
-      const pct = totCellDays > 0 ? (both / totCellDays * 100).toFixed(1) : "0.0";
-      rows.push([d, String(nTotal), String(nMod), String(nVii), frpMax.toFixed(2), frpSum.toFixed(2), pct, String(totCellDays)]);
+    daily.forEach((r) => {
+      rows.push([
+        r.d,
+        String(r.n),
+        String(r.m),
+        String(r.v),
+        String(r.fm),
+        String(r.fv),
+        String(r.am),
+        String(r.cd),
+      ]);
     });
 
-    // M2: BOM UTF-8 (\ufeff) + Blob + ObjectURL
     const csvContent = "\uFEFF" + rows.map((r) => r.join(",")).join("\r\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", "ignis_analytics_serie_armonizada.csv");
+    link.setAttribute("download", `ignis_analytics_serie_armonizada_${availableDays.length}_dias.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -90,20 +117,43 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-ignis-bg">
-      <Navbar days={calendarData.days} onExportCSV={handleExportCSV} />
+      <Navbar
+        days={availableDays}
+        lang={lang}
+        onToggleLang={setLang}
+        onExportCSV={handleExportCSV}
+      />
 
       <main className="flex-1 w-full max-w-[1600px] mx-auto px-6 py-4 space-y-4">
         {/* 1. KPIs en runtime */}
         <section aria-label="KPIs oficiales">
-          <KPICards kpis={kpis} totalCeldas={calendarData.cells.length} />
+          {kpis ? (
+            <KPICards
+              kpis={kpis}
+              totalCeldas={daily ? daily.reduce((acc, r) => Math.max(acc, r.cd), 0) : 0}
+            />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-ignis-surface border border-ignis-border rounded-lg p-4 h-24 animate-pulse"
+                />
+              ))}
+            </div>
+          )}
         </section>
 
-        {/* 2. Matriz de Calendario de Actividad (12 meses / días / p90) */}
+        {/* 2. Matriz de Calendario de Actividad (Multi-año / 12 meses / p90 / Épocas) */}
         <section aria-label="Matriz de Calendario de Actividad">
           <CalendarMatrix
-            calendar={calendarData}
+            daily={daily || []}
+            eras={eras}
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
+            selectedYear={selectedYear}
+            onSelectYear={setSelectedYear}
+            lang={lang}
           />
         </section>
 
@@ -111,31 +161,39 @@ export default function Home() {
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4" aria-label="Mapa y ficha de inspección">
           <div className="lg:col-span-2">
             <FireMap
-              cells={calendarData.cells}
-              days={calendarData.days}
+              cells={activeCells}
+              days={availableDays}
               selectedDate={selectedDate}
             />
           </div>
           <div className="lg:col-span-1">
             <DayDetails
-              calendar={calendarData}
+              dailyRow={selectedDailyRow}
+              cells={activeCells}
               selectedDate={selectedDate}
               onSelectDate={setSelectedDate}
+              availableDays={availableDays}
+              lang={lang}
             />
           </div>
         </section>
 
-        {/* 4. Resumen Metodológico y Límites */}
+        {/* 4. Resumen Metodológico y Épocas Satelitales */}
         <section aria-label="Marco oficial">
           <AuditPanel />
         </section>
       </main>
 
       <footer className="border-t border-ignis-border bg-ignis-surface py-3 px-6 text-center text-[11px] font-mono text-ignis-muted flex flex-col sm:flex-row justify-between items-center gap-2">
-        <div>IGNIS · Calendario de Actividad de Incendios · Sede Bahía Blanca</div>
         <div>
-          Fuente: NASA FIRMS (MODIS C6.1 / VIIRS C2) · NRT · Ventana:{" "}
-          {calendarData.days?.[0]} a {calendarData.days?.[calendarData.days.length - 1]} ({calendarData.days?.length} días)
+          {lang === "es"
+            ? "IGNIS · Calendario de Actividad de Incendios · Sede Bahía Blanca"
+            : "IGNIS · Fire Activity Calendar · Bahía Blanca Local Event"}
+        </div>
+        <div>
+          {lang === "es"
+            ? "Serie 2000-2026 · MODIS desde 2000 · VIIRS desde 2012 (Suomi-NPP), 2018 (NOAA-20) y 2024 (NOAA-21)"
+            : "Series 2000-2026 · MODIS since 2000 · VIIRS since 2012 (Suomi-NPP), 2018 (NOAA-20) and 2024 (NOAA-21)"}
         </div>
       </footer>
     </div>
