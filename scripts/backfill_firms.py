@@ -191,6 +191,7 @@ def main():
         print("\nDRY-RUN: no se hizo ninguna request.")
         return 0
 
+    plats_year = defaultdict(int)   # (año, plataforma) -> detecciones
     agg = defaultdict(lambda: {"n": 0, "frp_max": 0.0, "frp_sum": 0.0,
                                "conf_sum": 0.0, "conf_n": 0, "d": 0, "nt": 0})
     done = skipped = 0
@@ -213,6 +214,7 @@ def main():
             k = (cell[0], cell[1], r["date"], r["sensor"])
             x = agg[k]
             x["n"] += 1
+            plats_year[(r["date"][:4], plat)] += 1
             x["frp_max"] = max(x["frp_max"], r["frp"])
             x["frp_sum"] += r["frp"]
             if r["conf"] is not None:
@@ -322,7 +324,30 @@ def main():
     with open(os.path.join(args.outdir, "monthly.json"), "w", encoding="utf-8") as f:
         json.dump({"months": months, "totales": monthly}, f, ensure_ascii=False, indent=2)
 
+    # ---- eras.json: que plataformas aportaron en cada año (para declararlo en la UI)
+    PLAT_LABEL = {"MODIS": "MODIS (Terra/Aqua)", "NPP": "VIIRS Suomi-NPP",
+                  "N20": "VIIRS NOAA-20", "N21": "VIIRS NOAA-21"}
+    eras = {}
+    for (y, plat), n_det in sorted(plats_year.items()):
+        eras.setdefault(y, {})[PLAT_LABEL.get(plat, plat)] = n_det
+    eras_out = {y: {"plataformas": d, "n_plataformas": len(d),
+                    "solo_modis": len(d) == 1 and "MODIS (Terra/Aqua)" in d}
+                for y, d in sorted(eras.items())}
+    epath = os.path.join(args.outdir, "eras.json")
+    with open(epath, "w", encoding="utf-8") as f:
+        json.dump(eras_out, f, ensure_ascii=False, indent=2)
+    print(f"-> {epath}  ({len(eras_out)} años)")
+
     # ---- daily.json: agregado diario (lo que la UI debe consumir)
+    cd_map = defaultdict(set)
+    for (clat, clon, dt, sensor) in agg:
+        cd_map[(clat, clon, dt)].add(sensor)
+    am_por_dia = defaultdict(int)
+    cd_por_dia = defaultdict(int)
+    for (clat, clon, dt), sens in cd_map.items():
+        cd_por_dia[dt] += 1
+        if len(sens) > 1:
+            am_por_dia[dt] += 1
     daily = []
     for dt in alldays:
         nm = sum(x["n"] for (_, _, d2, s2), x in agg.items() if d2 == dt and s2 == "MODIS")
@@ -330,7 +355,8 @@ def main():
         fm = sum(x["frp_sum"] for (_, _, d2, s2), x in agg.items() if d2 == dt and s2 == "MODIS")
         fv = sum(x["frp_sum"] for (_, _, d2, s2), x in agg.items() if d2 == dt and s2 == "VIIRS")
         daily.append({"d": dt, "n": nm + nv, "m": nm, "v": nv,
-                      "fm": round(fm, 1), "fv": round(fv, 1)})
+                      "fm": round(fm, 1), "fv": round(fv, 1),
+                      "am": am_por_dia.get(dt, 0), "cd": cd_por_dia.get(dt, 0)})
     dpath = os.path.join(args.outdir, "daily.json")
     with open(dpath, "w", encoding="utf-8") as f:
         json.dump(daily, f, ensure_ascii=False, separators=(",", ":"))
