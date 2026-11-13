@@ -304,6 +304,7 @@ def main():
         "aoi": {"bbox_W_S_E_N": args.bbox, "grain_deg": args.grain,
                 "desde": alldays[0], "hasta": alldays[-1], "n_dias": len(alldays)},
         "global": totals(list(agg.items())),
+        "n_celdas_total": len(cells),
         "coincidencia_celda_dia": {
             "ambos": ambos,
             "ambos_pct": round(100 * ambos / tot_cd, 1) if tot_cd else None,
@@ -342,12 +343,18 @@ def main():
     cd_map = defaultdict(set)
     for (clat, clon, dt, sensor) in agg:
         cd_map[(clat, clon, dt)].add(sensor)
-    am_por_dia = defaultdict(int)
-    cd_por_dia = defaultdict(int)
+    am_por_dia = defaultdict(int)   # celdas-dia con ambos sensores
+    sm_por_dia = defaultdict(int)   # celdas-dia solo MODIS
+    sv_por_dia = defaultdict(int)   # celdas-dia solo VIIRS
+    cd_por_dia = defaultdict(int)   # celdas-dia totales
     for (clat, clon, dt), sens in cd_map.items():
         cd_por_dia[dt] += 1
         if len(sens) > 1:
             am_por_dia[dt] += 1
+        elif sens == {"MODIS"}:
+            sm_por_dia[dt] += 1
+        elif sens == {"VIIRS"}:
+            sv_por_dia[dt] += 1
     daily = []
     for dt in alldays:
         nm = sum(x["n"] for (_, _, d2, s2), x in agg.items() if d2 == dt and s2 == "MODIS")
@@ -356,7 +363,8 @@ def main():
         fv = sum(x["frp_sum"] for (_, _, d2, s2), x in agg.items() if d2 == dt and s2 == "VIIRS")
         daily.append({"d": dt, "n": nm + nv, "m": nm, "v": nv,
                       "fm": round(fm, 1), "fv": round(fv, 1),
-                      "am": am_por_dia.get(dt, 0), "cd": cd_por_dia.get(dt, 0)})
+                      "am": am_por_dia.get(dt, 0), "sm": sm_por_dia.get(dt, 0),
+                      "sv": sv_por_dia.get(dt, 0), "cd": cd_por_dia.get(dt, 0)})
     dpath = os.path.join(args.outdir, "daily.json")
     with open(dpath, "w", encoding="utf-8") as f:
         json.dump(daily, f, ensure_ascii=False, separators=(",", ":"))
