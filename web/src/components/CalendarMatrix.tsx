@@ -25,29 +25,29 @@ export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [calendarViewMode, setCalendarViewMode] = useState<"month" | "interannual">("month");
 
-  // Cálculo del percentil 90 para detección de anomalías
-  const { dailyFRP, anomalies } = useMemo(() => {
-    const days = calendar.days || [];
-    const frpMap: Record<string, number> = {};
+  // Precomputación ultra-eficiente O(celdas) para renderizado instantáneo
+  const { dailyStats, anomalies } = useMemo(() => {
+    const stats: Record<string, { n: number; maxFRP: number }> = {};
 
-    days.forEach((d) => {
-      frpMap[d] = 0;
-      calendar.cells.forEach((c) => {
-        const m = c.days[d];
-        if (m) frpMap[d] += m.frp_max;
+    calendar.cells.forEach((c) => {
+      if (!c.days) return;
+      Object.entries(c.days).forEach(([dt, m]) => {
+        if (!stats[dt]) stats[dt] = { n: 0, maxFRP: 0 };
+        stats[dt].n += m.n;
+        if (m.frp_max > stats[dt].maxFRP) stats[dt].maxFRP = m.frp_max;
       });
     });
 
-    const values = Object.values(frpMap).sort((a, b) => a - b);
-    const p90Index = Math.floor(values.length * 0.9);
-    const p90Threshold = values[p90Index] || 0;
+    const frpValues = Object.values(stats).map((s) => s.maxFRP).sort((a, b) => a - b);
+    const p90Index = Math.floor(frpValues.length * 0.9);
+    const p90Threshold = frpValues[p90Index] || 0;
 
     const anomalyMap: Record<string, boolean> = {};
-    Object.keys(frpMap).forEach((d) => {
-      anomalyMap[d] = frpMap[d] >= p90Threshold && frpMap[d] > 0;
+    Object.entries(stats).forEach(([dt, s]) => {
+      anomalyMap[dt] = s.maxFRP >= p90Threshold && s.maxFRP > 0;
     });
 
-    return { dailyFRP: frpMap, anomalies: anomalyMap };
+    return { dailyStats: stats, anomalies: anomalyMap };
   }, [calendar]);
 
   // Años soportados y disponibles en runtime
@@ -176,14 +176,12 @@ export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
               let maxFRP = 0;
 
               if (daysInMonthYear.length > 0) {
-                calendar.cells.forEach((c) => {
-                  daysInMonthYear.forEach((dt) => {
-                    const m = c.days[dt];
-                    if (m) {
-                      foci += m.n;
-                      maxFRP = Math.max(maxFRP, m.frp_max);
-                    }
-                  });
+                daysInMonthYear.forEach((dt) => {
+                  const s = dailyStats[dt];
+                  if (s) {
+                    foci += s.n;
+                    maxFRP = Math.max(maxFRP, s.maxFRP);
+                  }
                 });
 
                 return (
@@ -237,16 +235,9 @@ export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
               const isAnomaly = anomalies[dayStr];
 
               if (hasData) {
-                let dayFoci = 0;
-                let maxFRP = 0;
-                calendar.cells.forEach((c) => {
-                  const m = c.days[dayStr];
-                  if (m) {
-                    dayFoci += m.n;
-                    maxFRP = Math.max(maxFRP, m.frp_max);
-                  }
-                });
-
+                const dayStat = dailyStats[dayStr];
+                const dayFoci = dayStat ? dayStat.n : 0;
+                const maxFRP = dayStat ? dayStat.maxFRP : 0;
                 const color = getFRPColor(maxFRP);
 
                 return (

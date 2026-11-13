@@ -56,6 +56,7 @@ export const FireMap: React.FC<FireMapProps> = ({
           minZoom: 4,
           maxZoom: 12,
           attributionControl: true,
+          preferCanvas: true,
         });
 
         const cartoKey =
@@ -112,7 +113,12 @@ export const FireMap: React.FC<FireMapProps> = ({
     if (!layerGroupRef.current) return;
     layerGroupRef.current.clearLayers();
 
-    cells.forEach((cell) => {
+    // Si no hay fecha específica seleccionada, procesamos las celdas más relevantes para mantener fluidez
+    const targetCells = selectedDate
+      ? cells.filter((c) => c.days && c.days[selectedDate])
+      : cells.slice(0, 4000);
+
+    targetCells.forEach((cell) => {
       const relevantDays = selectedDate
         ? [cell.days[selectedDate]].filter(Boolean)
         : Object.values(cell.days);
