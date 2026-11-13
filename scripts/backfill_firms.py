@@ -53,6 +53,8 @@ PLATFORMS = {
     "MODIS": {"sp": "MODIS_SP", "nrt": "MODIS_NRT", "sensor": "MODIS", "pixel_km2": 1.0, "desde": "2000-02-24"},
     "N20": {"sp": "VIIRS_NOAA20_SP", "nrt": "VIIRS_NOAA20_NRT", "sensor": "VIIRS", "pixel_km2": 0.375 * 0.375, "desde": "2018-01-01"},
     "N21": {"sp": "VIIRS_NOAA21_SP", "nrt": "VIIRS_NOAA21_NRT", "sensor": "VIIRS", "pixel_km2": 0.375 * 0.375, "desde": "2024-01-17"},
+    # Suomi-NPP: historico 2012-01-20 -> 2026-11-02 13:00 UTC (cese oficial). Solo aporta al archivo.
+    "NPP": {"sp": "VIIRS_SNPP_SP", "nrt": "VIIRS_SNPP_NRT", "sensor": "VIIRS", "pixel_km2": 0.375 * 0.375, "desde": "2012-01-20", "hasta": "2026-11-02"},
 }
 VIIRS_CONF = {"l": 30.0, "low": 30.0, "n": 60.0, "nominal": 60.0, "h": 90.0, "high": 90.0}
 
@@ -138,7 +140,7 @@ def cell_of(lat, lon, grain):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--start", default="2023-01-01")
+    ap.add_argument("--start", default="2000-11-01")
     ap.add_argument("--end", default=date.today().isoformat())
     ap.add_argument("--bbox", nargs=4, type=float, default=[-68.5, -35.0, -56.0, -22.0],
                     metavar=("W", "S", "E", "N"))
@@ -147,6 +149,8 @@ def main():
     ap.add_argument("--cache", default="cache_firms")
     ap.add_argument("--key-file", default=None)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--split-year", action="store_true",
+                    help="emite calendar-YYYY.json por año (GitHub rechaza archivos >100 MB)")
     ap.add_argument("--nrt-tail", type=int, default=10, help="dias finales que se piden en NRT")
     args = ap.parse_args()
 
@@ -167,7 +171,10 @@ def main():
     plan = []
     for plat, cfg in PLATFORMS.items():
         p_start = max(start, d(cfg["desde"]))
-        for a, b in windows(p_start, end):
+        p_end = min(end, d(cfg["hasta"])) if cfg.get("hasta") else end
+        if p_start > p_end:
+            continue
+        for a, b in windows(p_start, p_end):
             src = cfg["nrt"] if a >= nrt_from else cfg["sp"]
             plan.append((plat, a, b, src))
 
@@ -254,6 +261,20 @@ def main():
                                {"por_sensor": val["por_sensor"]}
                                for dt, val in sorted(c["days"].items())}}
                      for (la, lo), c in cells.items()]}
+    if args.split_year:
+        by_year = defaultdict(list)
+        for c in cal["cells"]:
+            for y in sorted({dt[:4] for dt in c["days"]}):
+                by_year[y].append({"lat": c["lat"], "lon": c["lon"],
+                                   "days": {dt: v for dt, v in c["days"].items() if dt.startswith(y)}})
+        for y, cells_y in sorted(by_year.items()):
+            py = os.path.join(args.outdir, f"calendar-{y}.json")
+            with open(py, "w", encoding="utf-8") as f:
+                json.dump({"step_deg": args.grain,
+                           "days": [dt for dt in alldays if dt.startswith(y)],
+                           "cells": cells_y}, f, ensure_ascii=False, separators=(",", ":"))
+            print(f"-> {py}  ({len(cells_y)} celdas, {os.path.getsize(py)/1024/1024:.1f} MB)")
+
     cpath = os.path.join(args.outdir, "calendar.json")
     with open(cpath, "w", encoding="utf-8") as f:
         json.dump(cal, f, ensure_ascii=False)
@@ -300,6 +321,20 @@ def main():
         json.dump(kpi, f, ensure_ascii=False, indent=2)
     with open(os.path.join(args.outdir, "monthly.json"), "w", encoding="utf-8") as f:
         json.dump({"months": months, "totales": monthly}, f, ensure_ascii=False, indent=2)
+
+    # ---- daily.json: agregado diario (lo que la UI debe consumir)
+    daily = []
+    for dt in alldays:
+        nm = sum(x["n"] for (_, _, d2, s2), x in agg.items() if d2 == dt and s2 == "MODIS")
+        nv = sum(x["n"] for (_, _, d2, s2), x in agg.items() if d2 == dt and s2 == "VIIRS")
+        fm = sum(x["frp_sum"] for (_, _, d2, s2), x in agg.items() if d2 == dt and s2 == "MODIS")
+        fv = sum(x["frp_sum"] for (_, _, d2, s2), x in agg.items() if d2 == dt and s2 == "VIIRS")
+        daily.append({"d": dt, "n": nm + nv, "m": nm, "v": nv,
+                      "fm": round(fm, 1), "fv": round(fv, 1)})
+    dpath = os.path.join(args.outdir, "daily.json")
+    with open(dpath, "w", encoding="utf-8") as f:
+        json.dump(daily, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"-> {dpath}  ({len(daily)} dias, {os.path.getsize(dpath)/1024:.0f} KB)")
 
     g = kpi["global"]
     print(f"\nOK. {g['total']} detecciones en {len(alldays)} dias "
