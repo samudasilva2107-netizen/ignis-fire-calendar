@@ -31,6 +31,8 @@ export interface DailyRow {
   fm: number;  // FRP suma MODIS (MW)
   fv: number;  // FRP suma VIIRS (MW)
   am: number;  // celdas-día con ambos sensores
+  sm?: number; // celdas-día solo MODIS
+  sv?: number; // celdas-día solo VIIRS
   cd: number;  // celdas-día totales
 }
 

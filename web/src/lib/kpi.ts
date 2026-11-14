@@ -11,6 +11,8 @@ export function calculateKPIsFromDaily(daily: DailyRow[]): CalculatedKPIs {
   let frpModis = 0;
   let frpViirs = 0;
   let ambos = 0;
+  let soloModis = 0;
+  let soloViirs = 0;
   let totalCeldasDia = 0;
 
   for (const r of daily) {
@@ -20,14 +22,16 @@ export function calculateKPIsFromDaily(daily: DailyRow[]): CalculatedKPIs {
     frpModis += r.fm;
     frpViirs += r.fv;
     ambos += r.am;
+    soloModis += r.sm ?? 0;
+    soloViirs += r.sv ?? 0;
     totalCeldasDia += r.cd;
   }
 
-  const totCD = totalCeldasDia || 1;
-  const pctAmbos = Number(((ambos / totCD) * 100).toFixed(1));
-  const diffPct = Math.max(0, 100 - pctAmbos);
-  const pctSoloModis = Number((diffPct * 0.21).toFixed(1));
-  const pctSoloViirs = Number((diffPct * 0.79).toFixed(1));
+  // Base unificada (ambos + soloModis + soloViirs, o totalCeldasDia)
+  const baseTotal = (ambos + soloModis + soloViirs) || totalCeldasDia || 1;
+  const pctAmbos = Number(((ambos / baseTotal) * 100).toFixed(1));
+  const pctSoloModis = Number(((soloModis / baseTotal) * 100).toFixed(1));
+  const pctSoloViirs = Number(((soloViirs / baseTotal) * 100).toFixed(1));
 
   const ratio = modisDetecciones > 0 ? Number((viirsDetecciones / modisDetecciones).toFixed(2)) : 0;
   const frpTotal = Number((frpModis + frpViirs).toFixed(1));
@@ -46,8 +50,8 @@ export function calculateKPIsFromDaily(daily: DailyRow[]): CalculatedKPIs {
     frpMedioViirs,
     coincidencia: {
       ambos,
-      soloModis: Math.max(0, totalCeldasDia - ambos),
-      soloViirs: Math.max(0, totalCeldasDia - ambos),
+      soloModis,
+      soloViirs,
       pctAmbos,
       pctSoloModis,
       pctSoloViirs,

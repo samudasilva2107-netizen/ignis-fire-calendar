@@ -25,12 +25,13 @@ const FireMap = dynamic(
 export default function Home() {
   const [daily, setDaily] = useState<DailyRow[] | null>(null);
   const [eras, setEras] = useState<Record<string, EraPlatform> | null>(null);
+  const [kpiMeta, setKpiMeta] = useState<{ n_celdas_total?: number } | null>(null);
   const [yearCells, setYearCells] = useState<Record<string, GridCell[]>>({});
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [lang, setLang] = useState<"es" | "en">("es");
 
-  // 1. Cargar el agregado diario y épocas (Fix 2.3 de PLAN-DEV.md: peso < 1 MB en lugar de 58 MB)
+  // 1. Cargar el agregado diario, épocas y metadata de KPIs (Fix 2.3 de PLAN-DEV.md)
   useEffect(() => {
     fetch("/data/daily.json")
       .then((r) => r.json())
@@ -44,6 +45,11 @@ export default function Home() {
       .then((r) => r.json())
       .then(setEras)
       .catch(() => setEras({}));
+
+    fetch("/data/kpi.json")
+      .then((r) => r.json())
+      .then(setKpiMeta)
+      .catch(() => null);
   }, []);
 
   // 2. Lazy loading de celdas por año solo cuando se requiere para el mapa (Fix 2.5)
@@ -130,7 +136,7 @@ export default function Home() {
           {kpis ? (
             <KPICards
               kpis={kpis}
-              totalCeldas={daily ? daily.reduce((acc, r) => Math.max(acc, r.cd), 0) : 0}
+              totalCeldas={kpiMeta?.n_celdas_total || 35738}
             />
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
