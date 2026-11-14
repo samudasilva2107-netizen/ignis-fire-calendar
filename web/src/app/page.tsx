@@ -7,8 +7,9 @@ import { KPICards } from "../components/KPICards";
 import { CalendarMatrix } from "../components/CalendarMatrix";
 import { DayDetails } from "../components/DayDetails";
 import { AuditPanel } from "../components/AuditPanel";
-import { DailyRow, EraPlatform, GridCell, CalculatedKPIs } from "../types/ignis";
+import { DailyRow, EraPlatform, GridCell } from "../types/ignis";
 import { calculateKPIsFromDaily, formatInt } from "../lib/kpi";
+import { SSR_SNAPSHOT_KPIS, SSR_SNAPSHOT_METADATA } from "../lib/ssr-snapshot";
 
 interface KPIMetaContract {
   aoi?: {
@@ -37,32 +38,12 @@ interface KPIMetaContract {
   };
 }
 
-const INITIAL_KPIS: CalculatedKPIs = {
-  totalDetecciones: 8757997,
-  modisDetecciones: 2201939,
-  viirsDetecciones: 6556058,
-  ratioViirsModis: 2.98,
-  frpTotal: 184650645.6,
-  frpModis: 106775045.5,
-  frpViirs: 77875600.1,
-  frpMedioModis: 48.49,
-  frpMedioViirs: 11.88,
-  coincidencia: {
-    ambos: 409333,
-    soloModis: 809720,
-    soloViirs: 1362933,
-    pctAmbos: 15.9,
-    pctSoloModis: 31.4,
-    pctSoloViirs: 52.7,
-  },
-};
-
 const FireMap = dynamic(
   () => import("../components/FireMap").then((mod) => mod.FireMap),
   {
     ssr: false,
     loading: () => (
-      <div className="bg-ignis-surface border border-ignis-border rounded-lg p-3 flex flex-col h-[580px]">
+      <div className="bg-ignis-surface border border-ignis-border rounded-lg p-3 flex flex-col h-[480px]">
         <div className="flex justify-between items-center pb-2 border-b border-ignis-border">
           <div className="font-bold text-xs uppercase tracking-wider text-ignis-text">
             Serie Única Armonizada (Rejilla 0,05°)
@@ -141,9 +122,9 @@ export default function Home() {
       });
   }, [selectedYear, yearCells]);
 
-  // 3. KPIs calculados ultra-rápidos desde daily (Fix 2.4)
+  // 3. KPIs calculados ultra-rápidos desde daily (Fix 2.4). Durante SSR y antes de carga usa el snapshot generado en build.
   const kpis = useMemo(() => {
-    if (!daily || daily.length === 0) return INITIAL_KPIS;
+    if (!daily || daily.length === 0) return SSR_SNAPSHOT_KPIS;
     return calculateKPIsFromDaily(daily);
   }, [daily]);
 
@@ -219,7 +200,7 @@ export default function Home() {
         <section aria-label="KPIs oficiales">
           <KPICards
             kpis={kpis}
-            totalCeldas={kpiMeta?.n_celdas_total || 54438}
+            totalCeldas={kpiMeta?.n_celdas_total || SSR_SNAPSHOT_METADATA.n_celdas_total}
           />
         </section>
 
@@ -271,9 +252,9 @@ export default function Home() {
         </div>
         <div>
           {(() => {
-            const desde = daily && daily.length > 0 ? daily[0].d : (kpiMeta?.aoi?.desde || "2000-11-01");
-            const hasta = daily && daily.length > 0 ? daily[daily.length - 1].d : (kpiMeta?.aoi?.hasta || "2026-11-13");
-            const totalFocos = kpis ? kpis.totalDetecciones : (kpiMeta?.global?.total || 8757997);
+            const desde = daily && daily.length > 0 ? daily[0].d : (kpiMeta?.aoi?.desde || SSR_SNAPSHOT_METADATA.desde);
+            const hasta = daily && daily.length > 0 ? daily[daily.length - 1].d : (kpiMeta?.aoi?.hasta || SSR_SNAPSHOT_METADATA.hasta);
+            const totalFocos = kpis ? kpis.totalDetecciones : (kpiMeta?.global?.total || SSR_SNAPSHOT_METADATA.total_focos);
             return lang === "es"
               ? `Serie: ${desde} → ${hasta} (${formatInt(totalFocos)} focos)`
               : `Series: ${desde} → ${hasta} (${formatInt(totalFocos)} foci)`;

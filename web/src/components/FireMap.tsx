@@ -191,7 +191,7 @@ export const FireMap: React.FC<FireMapProps> = ({
   };
 
   return (
-    <div className="bg-ignis-surface border border-ignis-border rounded-lg p-3 flex flex-col h-[580px]">
+    <div className="bg-ignis-surface border border-ignis-border rounded-lg p-3 flex flex-col h-[480px]">
       <div className="flex justify-between items-center pb-2 border-b border-ignis-border">
         <div>
           <span className="font-bold text-xs uppercase tracking-wider text-ignis-text">

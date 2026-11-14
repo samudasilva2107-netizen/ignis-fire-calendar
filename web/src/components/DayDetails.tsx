@@ -21,7 +21,7 @@ export const DayDetails: React.FC<DayDetailsProps> = ({
 }) => {
   if (!selectedDate) {
     return (
-      <div className="bg-ignis-surface border border-ignis-border rounded-lg p-4 flex flex-col justify-between h-[580px]">
+      <div className="bg-ignis-surface border border-ignis-border rounded-lg p-4 flex flex-col justify-between h-[480px]">
         <div className="font-bold text-xs uppercase tracking-wider text-ignis-text border-b border-ignis-border pb-2">
           {lang === "es" ? "Ficha de Inspección Diaria" : "Daily Inspection Card"}
         </div>
@@ -91,7 +91,7 @@ export const DayDetails: React.FC<DayDetailsProps> = ({
   const pctBoth = totalCells > 0 ? Math.round((bothCells / totalCells) * 100) : 0;
 
   return (
-    <div className="bg-ignis-surface border border-ignis-border rounded-lg p-4 flex flex-col h-[580px]">
+    <div className="bg-ignis-surface border border-ignis-border rounded-lg p-4 flex flex-col h-[480px]">
       <div className="flex justify-between items-center border-b border-ignis-border pb-2">
         <div>
           <div className="text-[10px] uppercase text-ignis-muted font-mono">
