@@ -1,37 +1,218 @@
 {
+  "2000": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 3372
+    },
+    "n_plataformas": 1,
+    "solo_modis": true
+  },
+  "2001": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 32406
+    },
+    "n_plataformas": 1,
+    "solo_modis": true
+  },
+  "2002": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 77924
+    },
+    "n_plataformas": 1,
+    "solo_modis": true
+  },
+  "2003": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 143959
+    },
+    "n_plataformas": 1,
+    "solo_modis": true
+  },
+  "2004": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 117996
+    },
+    "n_plataformas": 1,
+    "solo_modis": true
+  },
+  "2005": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 92495
+    },
+    "n_plataformas": 1,
+    "solo_modis": true
+  },
+  "2006": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 109223
+    },
+    "n_plataformas": 1,
+    "solo_modis": true
+  },
+  "2007": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 116570
+    },
+    "n_plataformas": 1,
+    "solo_modis": true
+  },
+  "2008": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 125757
+    },
+    "n_plataformas": 1,
+    "solo_modis": true
+  },
+  "2009": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 96338
+    },
+    "n_plataformas": 1,
+    "solo_modis": true
+  },
+  "2010": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 83949
+    },
+    "n_plataformas": 1,
+    "solo_modis": true
+  },
+  "2011": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 99018
+    },
+    "n_plataformas": 1,
+    "solo_modis": true
+  },
+  "2012": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 77942,
+      "VIIRS Suomi-NPP": 244317
+    },
+    "n_plataformas": 2,
+    "solo_modis": false
+  },
+  "2013": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 90800,
+      "VIIRS Suomi-NPP": 321282
+    },
+    "n_plataformas": 2,
+    "solo_modis": false
+  },
+  "2014": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 47297,
+      "VIIRS Suomi-NPP": 161253
+    },
+    "n_plataformas": 2,
+    "solo_modis": false
+  },
+  "2015": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 52545,
+      "VIIRS Suomi-NPP": 170291
+    },
+    "n_plataformas": 2,
+    "solo_modis": false
+  },
+  "2016": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 69187,
+      "VIIRS Suomi-NPP": 217125
+    },
+    "n_plataformas": 2,
+    "solo_modis": false
+  },
+  "2017": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 78059,
+      "VIIRS Suomi-NPP": 253205
+    },
+    "n_plataformas": 2,
+    "solo_modis": false
+  },
+  "2018": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 64031,
+      "VIIRS NOAA-20": 174652,
+      "VIIRS Suomi-NPP": 212533
+    },
+    "n_plataformas": 3,
+    "solo_modis": false
+  },
+  "2019": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 68226,
+      "VIIRS NOAA-20": 219494,
+      "VIIRS Suomi-NPP": 222899
+    },
+    "n_plataformas": 3,
+    "solo_modis": false
+  },
+  "2020": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 169548,
+      "VIIRS NOAA-20": 588414,
+      "VIIRS Suomi-NPP": 610102
+    },
+    "n_plataformas": 3,
+    "solo_modis": false
+  },
+  "2021": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 81031,
+      "VIIRS NOAA-20": 286402,
+      "VIIRS Suomi-NPP": 283219
+    },
+    "n_plataformas": 3,
+    "solo_modis": false
+  },
+  "2022": {
+    "plataformas": {
+      "MODIS (Terra/Aqua)": 94373,
+      "VIIRS NOAA-20": 371763,
+      "VIIRS Suomi-NPP": 375947
+    },
+    "n_plataformas": 3,
+    "solo_modis": false
+  },
   "2023": {
     "plataformas": {
       "MODIS (Terra/Aqua)": 66472,
-      "VIIRS NOAA-20": 224048
+      "VIIRS NOAA-20": 224048,
+      "VIIRS Suomi-NPP": 236749
     },
-    "n_plataformas": 2,
+    "n_plataformas": 3,
     "solo_modis": false
   },
   "2024": {
     "plataformas": {
       "MODIS (Terra/Aqua)": 69515,
-      "VIIRS NOAA-20": 216000,
-      "VIIRS NOAA-21": 216452
+      "VIIRS NOAA-20": 220217,
+      "VIIRS NOAA-21": 212235,
+      "VIIRS Suomi-NPP": 215420
     },
-    "n_plataformas": 3,
+    "n_plataformas": 4,
     "solo_modis": false
   },
   "2025": {
     "plataformas": {
       "MODIS (Terra/Aqua)": 54635,
-      "VIIRS NOAA-20": 187000,
-      "VIIRS NOAA-21": 187460
+      "VIIRS NOAA-20": 188667,
+      "VIIRS NOAA-21": 185793,
+      "VIIRS Suomi-NPP": 190481
     },
-    "n_plataformas": 3,
+    "n_plataformas": 4,
     "solo_modis": false
   },
   "2026": {
     "plataformas": {
-      "MODIS (Terra/Aqua)": 18724,
-      "VIIRS NOAA-20": 60000,
-      "VIIRS NOAA-21": 59769
+      "MODIS (Terra/Aqua)": 19271,
+      "VIIRS NOAA-20": 62259,
+      "VIIRS NOAA-21": 58553,
+      "VIIRS Suomi-NPP": 48738
     },
-    "n_plataformas": 3,
+    "n_plataformas": 4,
     "solo_modis": false
   }
 }
