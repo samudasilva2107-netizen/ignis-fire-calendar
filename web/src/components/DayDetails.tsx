@@ -140,9 +140,13 @@ export const DayDetails: React.FC<DayDetailsProps> = ({
         <div className="flex-1 overflow-y-auto space-y-1 pr-1 font-mono text-[11px]">
           {activeCellsOnDay.length === 0 ? (
             <div className="text-center text-ignis-muted py-8 text-[11px]">
-              {lang === "es"
-                ? "Cargando desglose geoespacial del mapa..."
-                : "Loading geospatial breakdown for map..."}
+              {cells && cells.length > 0
+                ? (lang === "es"
+                    ? "Sin celdas con registros para esta fecha."
+                    : "No cells with records for this date.")
+                : (lang === "es"
+                    ? "Cargando desglose geoespacial del mapa..."
+                    : "Loading geospatial breakdown for map...")}
             </div>
           ) : (
             activeCellsOnDay.slice(0, 30).map((c, i) => {

@@ -89,6 +89,16 @@ export default function Home() {
     return yearCells[String(selectedYear)] || [];
   }, [selectedYear, yearCells]);
 
+  // Al elegir un día, el año activo tiene que seguirlo: si no, el mapa y la ficha
+  // buscan las celdas del día en el archivo del año equivocado y quedan vacíos.
+  const handleSelectDate = (d: string | null) => {
+    setSelectedDate(d);
+    if (d) {
+      const y = Number(d.slice(0, 4));
+      if (y && y !== selectedYear) setSelectedYear(y);
+    }
+  };
+
   // Exportar Analytics CSV (M1: denominador unificado · M2: BOM + Blob para Excel Windows)
   const handleExportCSV = () => {
     if (!daily || daily.length === 0) return;
@@ -156,7 +166,7 @@ export default function Home() {
             daily={daily || []}
             eras={eras}
             selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
+            onSelectDate={handleSelectDate}
             selectedYear={selectedYear}
             onSelectYear={setSelectedYear}
             lang={lang}
