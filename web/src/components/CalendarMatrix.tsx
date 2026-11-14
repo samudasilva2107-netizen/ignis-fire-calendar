@@ -57,14 +57,38 @@ export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
       };
     });
 
-    const frpValues = Object.values(stats).map((s) => s.maxFRP).sort((a, b) => a - b);
-    const p90Index = Math.floor(frpValues.length * 0.9);
-    const p90Threshold = frpValues[p90Index] || 0;
-
-    const anomalyMap: Record<string, boolean> = {};
+    // Agrupación por día-del-año (MM-DD) para percentil climatológico (Sección 5 de METHOD.md)
+    const doyGroups: Record<string, number[]> = {};
     Object.entries(stats).forEach(([dt, s]) => {
-      anomalyMap[dt] = s.maxFRP >= p90Threshold && s.maxFRP > 0;
+      const mmdd = dt.slice(5);
+      if (!doyGroups[mmdd]) doyGroups[mmdd] = [];
+      doyGroups[mmdd].push(s.maxFRP);
     });
+
+    const doyThresholds: Record<string, number> = {};
+    Object.entries(doyGroups).forEach(([mmdd, vals]) => {
+      vals.sort((a, b) => a - b);
+      const idx = Math.floor(vals.length * 0.9);
+      doyThresholds[mmdd] = vals[idx] || 0;
+    });
+
+    const isMultiYear = yearsSet.size >= 3;
+    const anomalyMap: Record<string, boolean> = {};
+
+    if (isMultiYear) {
+      Object.entries(stats).forEach(([dt, s]) => {
+        const mmdd = dt.slice(5);
+        const th = doyThresholds[mmdd] ?? 0;
+        anomalyMap[dt] = s.maxFRP >= th && s.maxFRP > 0;
+      });
+    } else {
+      const frpValues = Object.values(stats).map((s) => s.maxFRP).sort((a, b) => a - b);
+      const p90Index = Math.floor(frpValues.length * 0.9);
+      const p90Threshold = frpValues[p90Index] || 0;
+      Object.entries(stats).forEach(([dt, s]) => {
+        anomalyMap[dt] = s.maxFRP >= p90Threshold && s.maxFRP > 0;
+      });
+    }
 
     const years = Array.from(yearsSet).sort((a, b) => b - a);
 
