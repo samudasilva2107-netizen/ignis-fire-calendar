@@ -191,7 +191,7 @@ export const FireMap: React.FC<FireMapProps> = ({
   };
 
   return (
-    <div className="bg-ignis-surface border border-ignis-border rounded-lg p-3 flex flex-col h-[480px]">
+    <div className="bg-ignis-surface border border-ignis-border rounded-lg p-3 flex flex-col min-h-[480px]">
       <div className="flex justify-between items-center pb-2 border-b border-ignis-border">
         <div>
           <span className="font-bold text-xs uppercase tracking-wider text-ignis-text">
@@ -228,7 +228,7 @@ export const FireMap: React.FC<FireMapProps> = ({
         </div>
       </div>
 
-      <div className="relative flex-1 w-full rounded border border-ignis-border overflow-hidden my-2">
+      <div className="relative flex-1 min-h-[480px] w-full rounded border border-ignis-border overflow-hidden my-2">
         {mapError ? (
           <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center font-mono text-ignis-muted bg-[#12161c]">
             <div className="text-xs font-bold text-ignis-accent uppercase tracking-wider mb-2">

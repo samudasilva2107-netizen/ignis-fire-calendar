@@ -43,7 +43,7 @@ const FireMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="bg-ignis-surface border border-ignis-border rounded-lg p-3 flex flex-col h-[480px]">
+      <div className="bg-ignis-surface border border-ignis-border rounded-lg p-3 flex flex-col min-h-[480px]">
         <div className="flex justify-between items-center pb-2 border-b border-ignis-border">
           <div className="font-bold text-xs uppercase tracking-wider text-ignis-text">
             Serie Única Armonizada (Rejilla 0,05°)
@@ -58,7 +58,7 @@ const FireMap = dynamic(
           </div>
         </div>
 
-        <div className="relative flex-1 w-full rounded border border-ignis-border bg-[#12161c] my-2 flex flex-col items-center justify-center p-6 text-center font-mono">
+        <div className="relative flex-1 min-h-[480px] w-full rounded border border-ignis-border bg-[#12161c] my-2 flex flex-col items-center justify-center p-6 text-center font-mono">
           <div className="w-5 h-5 border-2 border-ignis-accent border-t-transparent rounded-full animate-spin mb-2" />
           <div className="text-xs font-bold text-ignis-text uppercase tracking-wider mb-1">
             Lienzo Cartográfico Geoespacial

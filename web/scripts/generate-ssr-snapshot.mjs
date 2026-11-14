@@ -17,8 +17,21 @@ if (!fs.existsSync(dailyPath)) {
   process.exit(1);
 }
 
+if (!fs.existsSync(kpiPath)) {
+  console.error(`[prebuild] ERROR: No se encontró ${kpiPath}`);
+  process.exit(1);
+}
+
 const daily = JSON.parse(fs.readFileSync(dailyPath, 'utf8'));
-const kpi = fs.existsSync(kpiPath) ? JSON.parse(fs.readFileSync(kpiPath, 'utf8')) : {};
+const kpi = JSON.parse(fs.readFileSync(kpiPath, 'utf8'));
+
+if (typeof kpi.n_celdas_total !== 'number' || kpi.n_celdas_total <= 0) {
+  console.error(`[prebuild] ERROR CRÍTICO: kpi.json no contiene el campo obligatorio 'n_celdas_total' (o no es un número positivo válido).`);
+  console.error(`[prebuild] Valor recibido: ${JSON.stringify(kpi.n_celdas_total)}`);
+  process.exit(1);
+}
+
+const n_celdas_total = kpi.n_celdas_total;
 
 let totalDetecciones = 0;
 let modisDetecciones = 0;
@@ -52,7 +65,6 @@ const frpTotal = Number((frpModis + frpViirs).toFixed(1));
 const frpMedioModis = modisDetecciones > 0 ? Number((frpModis / modisDetecciones).toFixed(2)) : 0;
 const frpMedioViirs = viirsDetecciones > 0 ? Number((frpViirs / viirsDetecciones).toFixed(2)) : 0;
 
-const n_celdas_total = kpi.n_celdas_total || 54438;
 const desde = daily[0]?.d || '2000-11-01';
 const hasta = daily[daily.length - 1]?.d || '2026-11-13';
 const n_dias = daily.length;
