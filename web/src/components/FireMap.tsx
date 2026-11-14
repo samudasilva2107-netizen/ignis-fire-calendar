@@ -240,7 +240,7 @@ export const FireMap: React.FC<FireMapProps> = ({
             <div className="text-[10px] text-ignis-muted/70 mt-2">{mapError}</div>
           </div>
         ) : (
-          <div ref={mapContainerRef} className="w-full h-full" />
+          <div ref={mapContainerRef} className="absolute inset-0" />
         )}
       </div>
 
