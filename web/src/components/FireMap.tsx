@@ -113,74 +113,80 @@ export const FireMap: React.FC<FireMapProps> = ({
     if (!layerGroupRef.current) return;
     layerGroupRef.current.clearLayers();
 
-    // Si no hay fecha específica seleccionada, procesamos las celdas más relevantes para mantener fluidez
+    // Si no hay fecha específica seleccionada, mostramos hasta 1.200 celdas activas
+    // para mantener 60 fps en dispositivos móviles y conexiones lentas sin saturar la CPU
     const targetCells = selectedDate
       ? cells.filter((c) => c.days && c.days[selectedDate])
-      : cells.slice(0, 4000);
+      : cells.slice(0, 1200);
 
-    targetCells.forEach((cell) => {
-      const relevantDays = selectedDate
-        ? [cell.days[selectedDate]].filter(Boolean)
-        : Object.values(cell.days);
+    // Yield to the browser render loop so Leaflet canvas never blocks calendar matrix interaction
+    requestAnimationFrame(() => {
+      if (!layerGroupRef.current) return;
 
-      if (relevantDays.length === 0) return;
+      targetCells.forEach((cell) => {
+        const relevantDays = selectedDate
+          ? [cell.days[selectedDate]].filter(Boolean)
+          : Object.values(cell.days);
 
-      let cellDetections = 0;
-      let cellMaxFRP = 0;
-      const allSensors = new Set<string>();
+        if (relevantDays.length === 0) return;
 
-      relevantDays.forEach((d) => {
-        cellDetections += d.n;
-        cellMaxFRP = Math.max(cellMaxFRP, d.frp_max);
-        d.sensores.forEach((s) => allSensors.add(s));
+        let cellDetections = 0;
+        let cellMaxFRP = 0;
+        const allSensors = new Set<string>();
+
+        relevantDays.forEach((d) => {
+          cellDetections += d.n;
+          cellMaxFRP = Math.max(cellMaxFRP, d.frp_max);
+          d.sensores.forEach((s) => allSensors.add(s));
+        });
+
+        if (cellDetections === 0) return;
+
+        const hasModis = allSensors.has("MODIS");
+        const hasViirs = allSensors.has("VIIRS");
+        const isBoth = hasModis && hasViirs;
+
+        let color = getFRPColor(cellMaxFRP);
+        if (mapMode === "provenance") {
+          if (isBoth) color = "#F0F6FC"; // Ambos: blanco brillante (doble confirmación)
+          else if (hasModis) color = "#D97706"; // Solo MODIS: ámbar oficial
+          else color = "#EA580C"; // Solo VIIRS: naranja acento oficial
+        }
+
+        const radius = Math.min(Math.max(Math.sqrt(cellDetections) * 2200, 2500), 12000);
+
+        const circle = L.circle([cell.lat, cell.lon], {
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.6,
+          weight: 1,
+          radius: radius,
+        });
+
+        const provenanceLabel = isBoth
+          ? "MODIS + VIIRS (Coincidencia)"
+          : hasModis
+          ? "Solo MODIS (1 km)"
+          : "Solo VIIRS (375 m)";
+
+        const popupContent = `
+          <div style="font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; padding: 4px;">
+            <div style="font-weight: 700; color: #FFF; margin-bottom: 4px;">Celda (${cell.lat.toFixed(3)}, ${cell.lon.toFixed(3)})</div>
+            <div style="color: #8B949E;">${selectedDate ? "Fecha: " + selectedDate : "Ventana acumulada"}</div>
+            <hr style="margin: 6px 0; border: 0; border-top: 1px solid #30363D;"/>
+            <div><strong>Detecciones:</strong> ${cellDetections}</div>
+            <div><strong>FRP Máx:</strong> ${cellMaxFRP.toFixed(1)} MW</div>
+            <div><strong>Procedencia:</strong> ${provenanceLabel}</div>
+          </div>
+        `;
+
+        circle.bindPopup(popupContent);
+        if (onSelectCell) {
+          circle.on("click", () => onSelectCell(cell));
+        }
+
+        circle.addTo(layerGroupRef.current);
       });
-
-      if (cellDetections === 0) return;
-
-      const hasModis = allSensors.has("MODIS");
-      const hasViirs = allSensors.has("VIIRS");
-      const isBoth = hasModis && hasViirs;
-
-      let color = getFRPColor(cellMaxFRP);
-      if (mapMode === "provenance") {
-        if (isBoth) color = "#F0F6FC"; // Ambos: blanco brillante (doble confirmación)
-        else if (hasModis) color = "#D97706"; // Solo MODIS: ámbar oficial
-        else color = "#EA580C"; // Solo VIIRS: naranja acento oficial
-      }
-
-      const radius = Math.min(Math.max(Math.sqrt(cellDetections) * 2200, 2500), 12000);
-
-      const circle = L.circle([cell.lat, cell.lon], {
-        color: color,
-        fillColor: color,
-        fillOpacity: 0.6,
-        weight: 1,
-        radius: radius,
-      });
-
-      const provenanceLabel = isBoth
-        ? "MODIS + VIIRS (Coincidencia)"
-        : hasModis
-        ? "Solo MODIS (1 km)"
-        : "Solo VIIRS (375 m)";
-
-      const popupContent = `
-        <div style="font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; padding: 4px;">
-          <div style="font-weight: 700; color: #FFF; margin-bottom: 4px;">Celda (${cell.lat.toFixed(3)}, ${cell.lon.toFixed(3)})</div>
-          <div style="color: #8B949E;">${selectedDate ? "Fecha: " + selectedDate : "Ventana acumulada"}</div>
-          <hr style="margin: 6px 0; border: 0; border-top: 1px solid #30363D;"/>
-          <div><strong>Detecciones:</strong> ${cellDetections}</div>
-          <div><strong>FRP Máx:</strong> ${cellMaxFRP.toFixed(1)} MW</div>
-          <div><strong>Procedencia:</strong> ${provenanceLabel}</div>
-        </div>
-      `;
-
-      circle.bindPopup(popupContent);
-      if (onSelectCell) {
-        circle.on("click", () => onSelectCell(cell));
-      }
-
-      circle.addTo(layerGroupRef.current);
     });
   };
 

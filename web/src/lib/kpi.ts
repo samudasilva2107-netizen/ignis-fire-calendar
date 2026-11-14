@@ -153,17 +153,31 @@ export function formatInt(val: number): string {
 /**
  * Deriva dinámicamente el rótulo de ventana temporal desde el array de fechas (CALENDAR.days)
  * Ej: ["2026-11-05", ..., "2026-11-12"] -> "5–12 nov 2026"
+ * En SSR o antes de carga, devuelve "2000–2026 (Activa)" eliminando cualquier flash de "Sin datos".
  */
-export function formatWindowShort(days?: string[]): string {
-  if (!days || days.length === 0) return "Sin datos";
+export function formatWindowShort(days?: string[], lang: "es" | "en" = "es"): string {
+  if (!days || days.length === 0) {
+    return lang === "es" ? "2000–2026 (Activa)" : "2000–2026 (Active)";
+  }
   const d0 = days[0];
   const dEnd = days[days.length - 1];
   if (d0 === dEnd) return d0;
   const p0 = d0.split("-");
   const pEnd = dEnd.split("-");
-  const months = ["", "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  const monthsEs = ["", "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  const monthsEn = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const months = lang === "es" ? monthsEs : monthsEn;
+
+  // Rango dentro del mismo mes y año (ej: 1–13 nov 2026)
   if (p0[0] === pEnd[0] && p0[1] === pEnd[1]) {
     return `${parseInt(p0[2], 10)}–${parseInt(pEnd[2], 10)} ${months[parseInt(p0[1], 10)]} ${p0[0]}`;
   }
-  return `${d0} a ${dEnd}`;
+  // Serie multianual (ej: 2000–2026)
+  if (p0[0] !== pEnd[0]) {
+    const formattedDays = days.length.toLocaleString(lang === "es" ? "es-AR" : "en-US");
+    return lang === "es"
+      ? `${p0[0]}–${pEnd[0]} (${formattedDays} días)`
+      : `${p0[0]}–${pEnd[0]} (${formattedDays} days)`;
+  }
+  return `${d0} → ${dEnd}`;
 }

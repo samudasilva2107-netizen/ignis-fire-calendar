@@ -29,7 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({ days, lang = "es", onToggleLang,
       <div className="flex items-center gap-3">
         <div className="hidden md:block text-[11px] font-mono text-ignis-muted text-right">
           <div>{lang === "es" ? "AOI: Centro-Norte Argentina (-68.5,-35.0,-56.0,-22.0)" : "AOI: Central-Northern Argentina (-68.5,-35.0,-56.0,-22.0)"}</div>
-          <div>{lang === "es" ? "Rejilla: 0,05° (~5,6 km)" : "Grid: 0.05° (~5.6 km)"} · {lang === "es" ? "Ventana" : "Window"}: {formatWindowShort(days)}</div>
+          <div>{lang === "es" ? "Rejilla: 0,05° (~5,6 km)" : "Grid: 0.05° (~5.6 km)"} · {lang === "es" ? "Ventana" : "Window"}: {formatWindowShort(days, lang)}</div>
         </div>
 
         <div className="flex bg-ignis-bg border border-ignis-border rounded p-0.5 font-mono text-[11px]">

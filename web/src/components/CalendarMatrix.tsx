@@ -192,7 +192,7 @@ export const CalendarMatrix: React.FC<CalendarMatrixProps> = ({
             onClick={() => onSelectDate(null)}
             className="text-[11px] font-mono text-ignis-accent hover:underline"
           >
-            {lang === "es" ? "Ver ventana completa" : "View full window"} ({formatWindowShort(allDays)})
+            {lang === "es" ? "Ver serie completa 2000–2026" : "View full 2000–2026 series"}
           </button>
         )}
       </div>
