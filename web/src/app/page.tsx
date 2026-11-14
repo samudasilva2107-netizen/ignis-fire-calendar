@@ -184,9 +184,9 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 4. Resumen Metodológico y Épocas Satelitales */}
-        <section aria-label="Marco oficial">
-          <AuditPanel />
+        {/* 4. Límites declarados del producto (los números de la UI salen del dato) */}
+        <section aria-label="Límites del producto">
+          <AuditPanel lang={lang} />
         </section>
       </main>
 
@@ -197,9 +197,19 @@ export default function Home() {
             : "IGNIS · Fire Activity Calendar · Bahía Blanca Local Event"}
         </div>
         <div>
-          {lang === "es"
-            ? "Serie 2000-2026 · MODIS desde 2000 · VIIRS desde 2012 (Suomi-NPP), 2018 (NOAA-20) y 2024 (NOAA-21)"
-            : "Series 2000-2026 · MODIS since 2000 · VIIRS since 2012 (Suomi-NPP), 2018 (NOAA-20) and 2024 (NOAA-21)"}
+          {(() => {
+            // Rango y volumen SIEMPRE derivados de daily.json: nunca escritos en el copy.
+            if (!daily || daily.length === 0) {
+              return lang === "es" ? "Serie: cargando datos…" : "Series: loading data…";
+            }
+            const desde = daily[0].d.slice(0, 4);
+            const hasta = daily[daily.length - 1].d.slice(0, 4);
+            const anios = new Set(daily.map((r) => r.d.slice(0, 4))).size;
+            const dias = daily.length;
+            return lang === "es"
+              ? `Serie ${desde}-${hasta} · ${anios} años · ${dias.toLocaleString("es-AR")} días con datos`
+              : `Series ${desde}-${hasta} · ${anios} years · ${dias.toLocaleString("en-US")} days with data`;
+          })()}
         </div>
       </footer>
     </div>

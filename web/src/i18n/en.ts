@@ -37,7 +37,7 @@ export const en: Translations = {
   platform: "platform",
   soloModisNote: "MODIS only: no VIIRS in this era",
   footerTitle: "IGNIS · Fire Activity Calendar · Bahía Blanca Local Event",
-  footerEras: "Series 2000-2026 · MODIS since 2000 · VIIRS since 2012 (Suomi-NPP), 2018 (NOAA-20) and 2024 (NOAA-21)",
+  footerEras: "Series and per-year platforms derived from the loaded data (daily.json / eras.json)",
   daysOfWeek: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
   months: [
     "January", "February", "March", "April", "May", "June",

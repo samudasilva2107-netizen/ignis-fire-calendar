@@ -35,7 +35,7 @@ export const es = {
   platform: "plataforma",
   soloModisNote: "sólo MODIS: sin VIIRS en esta época",
   footerTitle: "IGNIS · Calendario de Actividad de Incendios · Sede Bahía Blanca",
-  footerEras: "Serie 2000-2026 · MODIS desde 2000 · VIIRS desde 2012 (Suomi-NPP), 2018 (NOAA-20) y 2024 (NOAA-21)",
+  footerEras: "Serie y plataformas por año derivadas de los datos cargados (daily.json / eras.json)",
   daysOfWeek: ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"],
   months: [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
